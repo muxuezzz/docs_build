@@ -1,0 +1,171 @@
+name: 离线文档 · vLLM Ascend
+
+# 手动触发：仓库页面 → Actions → 左侧「离线文档 · vLLM Ascend」→ Run workflow
+# 产物：workflow 页面底部 Artifacts（vllm-ascend-docs-zh / -en，均为 zip）
+#       勾选 publish_release 时，额外汇总发布到 Releases
+on:
+  workflow_dispatch:
+    inputs:
+      lang:
+        description: 构建语言
+        type: choice
+        options:
+          - zh
+          - en
+          - both
+        default: zh
+      ref:
+        description: 上游 git ref（分支 / tag / commit）
+        type: string
+        default: main
+      site_url:
+        description: 站点根地址（留空则沿用补丁里的内网地址）
+        type: string
+        default: ''
+      publish_release:
+        description: 构建完成后发布到 GitHub Release
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      lang:
+        type: string
+        default: zh
+      ref:
+        type: string
+        default: main
+      site_url:
+        type: string
+        default: ''
+      publish_release:
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: offline-vllm-ascend-${{ inputs.ref }}-${{ inputs.lang }}
+  cancel-in-progress: true
+
+env:
+  PROJECT: vllm-ascend
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  plan:
+    name: 解析构建矩阵
+    runs-on: ubuntu-latest
+    outputs:
+      langs: ${{ steps.set.outputs.langs }}
+    steps:
+      - id: set
+        shell: bash
+        run: |
+          case "${{ inputs.lang }}" in
+            both) echo 'langs=["zh","en"]' >> "$GITHUB_OUTPUT" ;;
+            en)   echo 'langs=["en"]'      >> "$GITHUB_OUTPUT" ;;
+            *)    echo 'langs=["zh"]'      >> "$GITHUB_OUTPUT" ;;
+          esac
+
+  build:
+    name: 构建 ${{ matrix.lang }}
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        lang: ${{ fromJSON(needs.plan.outputs.langs) }}
+    steps:
+      - name: 检出构建仓库（补丁与脚本）
+        uses: actions/checkout@v4
+        with:
+          path: build-tools
+
+      - name: 检出上游源码
+        uses: actions/checkout@v4
+        with:
+          repository: vllm-project/vllm-ascend
+          ref: ${{ inputs.ref }}
+          path: src
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+
+      - name: 应用离线化补丁
+        run: bash build-tools/scripts/apply-patches.sh src build-tools/patches/${{ env.PROJECT }}
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: src/docs/requirements-docs.txt
+
+      - name: 安装文档依赖
+        working-directory: src
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r docs/requirements-docs.txt
+
+      - name: 预生成代码示例（失败不阻塞）
+        working-directory: src
+        run: python tools/docs_codegen/cli.py || echo "::warning::docs_codegen 执行失败，已跳过"
+
+      - name: 构建站点
+        env:
+          SITE_URL: ${{ inputs.site_url }}
+        run: |
+          bash build-tools/scripts/build-vllm-ascend.sh \
+            src "out/${{ matrix.lang }}" "${{ matrix.lang }}" "$SITE_URL"
+
+      - name: 打包为 zip
+        run: |
+          mkdir -p dist
+          (cd "out/${{ matrix.lang }}" && zip -qr "$GITHUB_WORKSPACE/dist/vllm-ascend-docs-${{ matrix.lang }}.zip" .)
+          ls -lh dist/
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: vllm-ascend-docs-${{ matrix.lang }}
+          path: dist/*.zip
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+      - name: 写入构建摘要
+        run: |
+          {
+            echo "### vLLM Ascend 离线文档（${{ matrix.lang }}）"
+            echo ''
+            echo "- 上游 ref: \`${{ inputs.ref }}\`"
+            echo "- 产物: \`vllm-ascend-docs-${{ matrix.lang }}.zip\` ($(du -h "dist/vllm-ascend-docs-${{ matrix.lang }}.zip" | cut -f1))"
+            echo "- 解压后直接打开 \`index.html\` 即可离线浏览"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    name: 发布 Release
+    needs: [build]
+    if: inputs.publish_release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 汇总产物
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: 创建 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="vllm-ascend-offline-$(date -u +%Y%m%d)-${{ github.run_number }}"
+          gh release create "$tag" dist/*.zip \
+            --title "vLLM Ascend 离线文档 $tag" \
+            --notes "手动触发的离线文档构建。上游 ref: \`${{ inputs.ref }}\`，语言: ${{ inputs.lang }}。触发人: @${{ github.actor }}"
+          echo "已发布: $tag" >> "$GITHUB_STEP_SUMMARY"

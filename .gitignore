@@ -1,0 +1,9 @@
+# 构建中间产物
+/out/
+/dist/
+/work/
+*.zip
+.DS_Store
+
+# WorkBuddy 本地记忆，不入库
+.workbuddy/

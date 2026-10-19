@@ -1,0 +1,203 @@
+name: 离线文档 · vLLM Recipes
+
+# 手动触发：Actions → 「离线文档 · vLLM Recipes」→ Run workflow
+# 两套站点可分开或一起构建：
+#   mkdocs —— 仓库根目录的 Markdown 指南（mkdocs.yml）
+#   next   —— Next.js 静态站点（next build，output: 'export' → out/）
+on:
+  workflow_dispatch:
+    inputs:
+      site:
+        description: 构建哪套站点
+        type: choice
+        options:
+          - all
+          - mkdocs
+          - next
+        default: all
+      ref:
+        description: 上游 git ref（分支 / tag / commit）
+        type: string
+        default: main
+      site_url:
+        description: 站点根地址（留空则用默认内网地址）
+        type: string
+        default: ''
+      publish_release:
+        description: 构建完成后发布到 GitHub Release
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      site:
+        type: string
+        default: all
+      ref:
+        type: string
+        default: main
+      site_url:
+        type: string
+        default: ''
+      publish_release:
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: offline-recipes-${{ inputs.ref }}-${{ inputs.site }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.13"
+
+jobs:
+  mkdocs:
+    name: 构建 MkDocs 站点
+    if: ${{ inputs.site == 'all' || inputs.site == 'mkdocs' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: 检出构建仓库（补丁与脚本）
+        uses: actions/checkout@v4
+        with:
+          path: build-tools
+
+      - name: 检出上游源码
+        uses: actions/checkout@v4
+        with:
+          repository: vllm-project/recipes
+          ref: ${{ inputs.ref }}
+          path: src
+          # git-revision-date-localized 需要完整提交历史
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+
+      - name: 应用离线化补丁
+        run: bash build-tools/scripts/apply-patches.sh src build-tools/patches/recipes
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: src/requirements.txt
+
+      - name: 安装文档依赖
+        working-directory: src
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 构建站点
+        env:
+          SITE_URL: ${{ inputs.site_url }}
+        run: |
+          bash build-tools/scripts/build-recipes-mkdocs.sh \
+            src out/mkdocs "$SITE_URL"
+
+      - name: 打包为 zip
+        run: |
+          mkdir -p dist
+          (cd out/mkdocs && zip -qr "$GITHUB_WORKSPACE/dist/recipes-mkdocs-offline.zip" .)
+          ls -lh dist/
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: recipes-mkdocs-offline
+          path: dist/recipes-mkdocs-offline.zip
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+  next:
+    name: 构建 Next.js 站点
+    if: ${{ inputs.site == 'all' || inputs.site == 'next' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: 检出构建仓库（补丁与脚本）
+        uses: actions/checkout@v4
+        with:
+          path: build-tools
+
+      - name: 检出上游源码
+        uses: actions/checkout@v4
+        with:
+          repository: vllm-project/recipes
+          ref: ${{ inputs.ref }}
+          path: src
+          fetch-depth: 1
+          submodules: false
+          persist-credentials: false
+
+      - name: 应用离线化补丁
+        run: bash build-tools/scripts/apply-patches.sh src build-tools/patches/recipes
+
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: src/pnpm-lock.yaml
+
+      - name: 安装依赖
+        working-directory: src
+        run: pnpm install --frozen-lockfile
+
+      - name: 构建静态站点
+        env:
+          SITE_URL: ${{ inputs.site_url }}
+        run: |
+          bash build-tools/scripts/build-recipes-next.sh \
+            src out/next "$SITE_URL"
+
+      - name: 打包为 zip
+        run: |
+          mkdir -p dist
+          (cd out/next && zip -qr -6 "$GITHUB_WORKSPACE/dist/recipes-next-offline.zip" .)
+          ls -lh dist/
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: recipes-next-offline
+          path: dist/recipes-next-offline.zip
+          if-no-files-found: error
+          retention-days: 30
+          # 已经是 zip，再压一次只是白花时间
+          compression-level: 0
+
+  release:
+    name: 发布 Release
+    needs: [mkdocs, next]
+    # 任一站点点被跳过时 needs.*.result 为 skipped，这里只要求没有失败
+    if: ${{ !cancelled() && !failure() && inputs.publish_release && (needs.mkdocs.result == 'success' || needs.next.result == 'success') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 汇总产物
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: 创建 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="recipes-offline-$(date -u +%Y%m%d)-${{ github.run_number }}"
+          gh release create "$tag" dist/*.zip \
+            --title "vLLM Recipes 离线文档 $tag" \
+            --notes "手动触发的离线文档构建。上游 ref: \`${{ inputs.ref }}\`，站点: ${{ inputs.site }}。触发人: @${{ github.actor }}"
+          echo "已发布: $tag" >> "$GITHUB_STEP_SUMMARY"

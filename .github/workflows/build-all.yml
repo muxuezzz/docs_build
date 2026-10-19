@@ -1,0 +1,52 @@
+name: 离线文档 · 一键全量
+
+# 一个按钮同时构建两个项目；实际逻辑复用各自的可复用工作流。
+on:
+  workflow_dispatch:
+    inputs:
+      lang:
+        description: vLLM Ascend 语言
+        type: choice
+        options: [zh, en, both]
+        default: zh
+      site:
+        description: vLLM Recipes 站点
+        type: choice
+        options: [all, mkdocs, next]
+        default: all
+      ref_vllm_ascend:
+        description: vllm-ascend 上游 ref
+        type: string
+        default: main
+      ref_recipes:
+        description: recipes 上游 ref
+        type: string
+        default: main
+      publish_release:
+        description: 构建完成后发布到 GitHub Release
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: offline-docs-all
+  cancel-in-progress: false
+
+jobs:
+  vllm-ascend:
+    name: vLLM Ascend
+    uses: ./.github/workflows/build-vllm-ascend.yml
+    with:
+      lang: ${{ inputs.lang }}
+      ref: ${{ inputs.ref_vllm_ascend }}
+      publish_release: ${{ inputs.publish_release }}
+
+  recipes:
+    name: vLLM Recipes
+    uses: ./.github/workflows/build-recipes.yml
+    with:
+      site: ${{ inputs.site }}
+      ref: ${{ inputs.ref_recipes }}
+      publish_release: ${{ inputs.publish_release }}

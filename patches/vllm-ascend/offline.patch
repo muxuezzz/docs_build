@@ -1,0 +1,78 @@
+diff --git a/docs/overrides/main.html b/docs/overrides/main.html
+index 7a419853f..91232677b 100644
+--- a/docs/overrides/main.html
++++ b/docs/overrides/main.html
+@@ -24,7 +24,7 @@
+ {% if not config.extra.is_release %}
+ <div class="md-announce">
+   {{ t.banner_preview }}
+-  <a href="https://docs.vllm.ai/projects/ascend/{{ 'zh-cn' if config.extra.docs_lang == 'zh' else 'en' }}/{{ config.extra.stable_vllm_ascend_version }}">{{ t.banner_link }}</a>
++  <a href="http://vllm-ascend/docx.cw.com/{{ config.extra.stable_vllm_ascend_version }}">{{ t.banner_link }}</a>
+   {{ t.banner_suffix }}
+ </div>
+ {% endif %}
+diff --git a/docs/source/index.md b/docs/source/index.md
+index 675b8c684..2acd040ab 100644
+--- a/docs/source/index.md
++++ b/docs/source/index.md
+@@ -16,9 +16,7 @@ hide:
+ 
+ <p style="text-align:center">
+ <script async defer src="https://buttons.github.io/buttons.js"></script>
+-<a class="github-button" href="https://github.com/vllm-project/vllm-ascend" data-show-count="true" data-size="large" aria-label="Star">Star</a>
+-<a class="github-button" href="https://github.com/vllm-project/vllm-ascend/subscription" data-icon="octicon-eye" data-size="large" aria-label="Watch">Watch</a>
+-<a class="github-button" href="https://github.com/vllm-project/vllm-ascend/fork" data-icon="octicon-repo-forked" data-size="large" aria-label="Fork">Fork</a>
++<a class="md-button" href="http://git.cw.com/ascend/vllm-ascend" data-show-count="true" data-size="large" aria-label="Star">Star</a>
+ </p>
+ 
+ vLLM Ascend plugin (vllm-ascend) is a community-maintained hardware plugin for running vLLM on the Ascend NPU.
+diff --git a/mkdocs.yml b/mkdocs.yml
+index 2729c3b17..50c3954ac 100644
+--- a/mkdocs.yml
++++ b/mkdocs.yml
+@@ -8,10 +8,10 @@
+ # Deployed on Read the Docs with Material for MkDocs theme.
+ 
+ site_name: !ENV [DOCS_SITE_NAME, 'vLLM Ascend']
+-site_url: !ENV [DOCS_SITE_URL, 'https://docs.vllm.ai/projects/ascend/en/latest/']
++site_url: !ENV [DOCS_SITE_URL, 'http://vllm-ascend/docx.cw.com/']
+ site_description: vLLM Ascend plugin - a community-maintained hardware plugin for running vLLM on the Ascend NPU.
+ site_author: the vllm-ascend team
+-repo_url: https://github.com/vllm-project/vllm-ascend
++repo_url: http://git.cw.com/ascend/vllm-ascend
+ repo_name: vllm-project/vllm-ascend
+ edit_uri: edit/main/docs/source/
+ 
+@@ -24,7 +24,10 @@ theme:
+   language: !ENV [DOCS_THEME_LANG, en]
+   logo: logos/vllm-ascend-logo-text-light.png
+   favicon: logos/vllm-ascend-logo-text-light.png
++  font: false
+   features:
++    - offline
++    - privacy
+     - navigation.tabs
+     - navigation.tabs.sticky
+     - navigation.sections
+@@ -82,6 +85,8 @@ plugins:
+         - "release.template.md"
+         - "zh/*"
+         - "__pycache__/*"
++  - offline
++  - privacy
+ 
+ # ---- Hooks ----
+ hooks:
+diff --git a/tools/rtd_build.sh b/tools/rtd_build.sh
+index 25a4507ff..ba175e696 100755
+--- a/tools/rtd_build.sh
++++ b/tools/rtd_build.sh
+@@ -44,7 +44,7 @@ if [ "$DOCS_LANG" = "zh" ]; then
+     export DOCS_DIR=docs/source/zh
+     export DOCS_MACROS_DIR=docs/source/zh
+     export DOCS_SITE_NAME="vLLM Ascend (中文)"
+-    export DOCS_SITE_URL="https://docs.vllm.ai/projects/ascend/zh/latest/"
++    export DOCS_SITE_URL="http://vllm-ascend/docx.cw.com/"
+     export DOCS_THEME_LANG=zh
+     export DOCS_PALETTE_LIGHT_TOGGLE_NAME="切换到深色模式"
+     export DOCS_PALETTE_DARK_TOGGLE_NAME="切换到浅色模式"
