@@ -30,6 +30,17 @@ for name in vllm-ascend recipes ruff uv ty; do
 
   mkdir -p "$out_root/$name"
   target="$out_root/$name/offline.patch"
+
+  # 新增的模板/静态资源（如 overrides/partials/source.html、public/logos/*.png）
+  # 默认是未跟踪状态，直接 git diff 抓不到。这里只把这几类新文件用
+  # intent-to-add 标记进来，其余未跟踪文件（产物 zip、lock 文件等）一律忽略。
+  untracked=$(git -C "$repo" ls-files --others --exclude-standard \
+    | grep -E '(^|/)(overrides|\.overrides)/|^public/logos/' || true)
+  if [ -n "$untracked" ]; then
+    git -C "$repo" add -N -- $untracked >/dev/null 2>&1 || true
+    echo "提示: $repo 纳入 $(echo "$untracked" | wc -l) 个新增模板文件" >&2
+  fi
+
   git -C "$repo" diff --binary --no-color > "$target"
 
   if [ -s "$target" ]; then

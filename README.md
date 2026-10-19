@@ -36,10 +36,17 @@ GitHub Actions（手动触发）
 | 补丁 | 改了什么 |
 | --- | --- |
 | `patches/vllm-ascend` | `offline`/`privacy` 插件、去 CDN 字体、site_url/repo_url 换内网地址 |
-| `patches/recipes` | 同上 + `output: 'export'`、去掉 huggingface.co 外链 |
-| `patches/ruff` | 在 `mkdocs.template.yml` 里加 `font: false` + `privacy`/`offline`，去 fathom 统计，去 docs.astral.sh 图标外链 |
+| `patches/recipes` | 同上 + `output: 'export'`、logo 从 docs.vllm.ai 下载到 `public/logos`、去掉首页 `meta refresh` 跳转、去掉 Material 的 GitHub star 请求、移除无人使用的 MathJax |
+| `patches/ruff` | 在 `mkdocs.template.yml` 里加 `font: false` + `privacy`/`offline`，去 fathom 统计，去 docs.astral.sh 图标外链，`source.html` 去掉 `api.github.com` 请求 |
 | `patches/uv` | 同 ruff（配置在 `mkdocs.yml`） |
 | `patches/ty` | 同 ruff（配置在 `mkdocs.yml`） |
+
+### 为什么会有 `overrides/partials/source.html`
+
+mkdocs-material 的仓库按钮带 `data-md-component="source"` 时，`bundle.js` 会去
+`https://api.github.com/repos/<org>/<repo>` 和 `.../releases/latest` 取 star 数和最新版本。
+断网环境下这些 XHR 要等 DNS 超时，内网部署时表现为「打开页面后转圈一会儿」。
+补丁里的覆盖模板保留同样的 DOM 和图标，只去掉那个属性，按钮退化成普通链接，不再发请求。
 
 ## 首次使用
 
@@ -134,8 +141,9 @@ DOCS_SRC=/d/somewhere bash scripts/make-patches.sh
 git add patches && git commit -m "update offline patches"
 ```
 
-`make-patches.sh` 只导出**已跟踪文件**的改动（`git diff`）。新加的文件要先 `git add`
-（或至少 `git add -N`），否则不会进补丁。
+`make-patches.sh` 导出**已跟踪文件**的改动，另外自动把新增的模板与静态资源
+（`overrides/`、`.overrides/`、`public/logos/` 下的新文件）以 intent-to-add 方式纳入补丁，
+所以 `source.html`、logo 这类新文件不用手动 `git add`。其余未跟踪文件（构建产物 zip、lock 等）会被忽略。
 
 上游改动导致补丁打不上时，工作流会在「应用离线化补丁」这步直接失败，
 并在日志里给出 `::error` 提示 —— 此时回到本地 `git pull` 解决冲突后重新导出补丁。
