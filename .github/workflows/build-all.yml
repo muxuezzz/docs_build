@@ -1,6 +1,7 @@
 name: 离线文档 · 一键全量
 
-# 一个按钮同时构建两个项目；实际逻辑复用各自的可复用工作流。
+# 一个按钮同时构建多个项目；实际逻辑复用各自的可复用工作流。
+# 注意：Astral 的 ruff/uv 需要编译 Rust，全量跑一次大约 20-40 分钟。
 on:
   workflow_dispatch:
     inputs:
@@ -14,6 +15,11 @@ on:
         type: choice
         options: [all, mkdocs, next]
         default: all
+      astral:
+        description: Astral 文档（ruff / uv / ty）
+        type: choice
+        options: [all, ruff, uv, ty, none]
+        default: all
       ref_vllm_ascend:
         description: vllm-ascend 上游 ref
         type: string
@@ -22,6 +28,14 @@ on:
         description: recipes 上游 ref
         type: string
         default: main
+      ref_astral:
+        description: astral 三个仓库共用的上游 ref
+        type: string
+        default: main
+      ref_pi:
+        description: Pi 文档上游 ref
+        type: string
+        default: master
       publish_release:
         description: 构建完成后发布到 GitHub Release
         type: boolean
@@ -49,4 +63,20 @@ jobs:
     with:
       site: ${{ inputs.site }}
       ref: ${{ inputs.ref_recipes }}
+      publish_release: ${{ inputs.publish_release }}
+
+  astral:
+    name: Astral
+    if: inputs.astral != 'none'
+    uses: ./.github/workflows/build-astral.yml
+    with:
+      project: ${{ inputs.astral }}
+      ref: ${{ inputs.ref_astral }}
+      publish_release: ${{ inputs.publish_release }}
+
+  pi:
+    name: Pi 文档
+    uses: ./.github/workflows/build-pi.yml
+    with:
+      ref: ${{ inputs.ref_pi }}
       publish_release: ${{ inputs.publish_release }}

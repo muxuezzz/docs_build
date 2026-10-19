@@ -1,0 +1,167 @@
+name: 离线文档 · Astral (ruff / uv / ty)
+
+# 三个仓库共用一套 mkdocs-material 构建流程，差异集中在 scripts/build-astral.sh：
+#   ruff —— cargo dev 导出规则页（需要 Rust，约 5-10 分钟）
+#   uv   —— cargo dev 生成 CLI/选项/环境变量参考页（需要 Rust，首次约 10-20 分钟）
+#   ty   —— 参考页已入库，直接构建（无需 Rust，最快）
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: 构建哪个项目
+        type: choice
+        options:
+          - all
+          - ruff
+          - uv
+          - ty
+        default: all
+      ref:
+        description: 上游 git ref（三个仓库共用同一个 ref）
+        type: string
+        default: main
+      publish_release:
+        description: 构建完成后发布到 GitHub Release
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      project:
+        type: string
+        default: all
+      ref:
+        type: string
+        default: main
+      publish_release:
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: offline-astral-${{ inputs.ref }}-${{ inputs.project }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    name: 解析构建矩阵
+    runs-on: ubuntu-latest
+    outputs:
+      projects: ${{ steps.set.outputs.projects }}
+    steps:
+      - id: set
+        shell: bash
+        run: |
+          case "${{ inputs.project }}" in
+            ruff) echo 'projects=["ruff"]' >> "$GITHUB_OUTPUT" ;;
+            uv)   echo 'projects=["uv"]'   >> "$GITHUB_OUTPUT" ;;
+            ty)   echo 'projects=["ty"]'   >> "$GITHUB_OUTPUT" ;;
+            *)    echo 'projects=["ruff","uv","ty"]' >> "$GITHUB_OUTPUT" ;;
+          esac
+
+  build:
+    name: 构建 ${{ matrix.project }}
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJSON(needs.plan.outputs.projects) }}
+    steps:
+      - name: 检出构建仓库（补丁与脚本）
+        uses: actions/checkout@v4
+        with:
+          path: build-tools
+
+      - name: 检出上游源码
+        uses: actions/checkout@v4
+        with:
+          repository: astral-sh/${{ matrix.project }}
+          ref: ${{ inputs.ref }}
+          path: src
+          # uv/ty 的 git-revision-date 插件需要完整历史；ruff 不需要
+          fetch-depth: ${{ matrix.project == 'ruff' && 1 || 0 }}
+          submodules: false
+          persist-credentials: false
+
+      - name: 应用离线化补丁
+        run: bash build-tools/scripts/apply-patches.sh src build-tools/patches/${{ matrix.project }}
+
+      - name: 安装 uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          python-version: '3.13'
+          enable-cache: true
+          cache-dependency-glob: src/uv.lock
+
+      - name: 安装 Rust（ruff / uv 需要）
+        if: matrix.project != 'ty'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 缓存 Rust 构建产物（ruff / uv 需要）
+        if: matrix.project != 'ty'
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src -> target
+          # cargo dev 生成参考页，产物随源码变化而变化
+          cache-on-failure: true
+
+      - name: 构建站点
+        env:
+          # gh-admonitions 会访问 GitHub API，带上 token 提高限额
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          bash build-tools/scripts/build-astral.sh \
+            "${{ matrix.project }}" src "out/${{ matrix.project }}"
+
+      - name: 打包为 zip
+        run: |
+          mkdir -p dist
+          (cd "out/${{ matrix.project }}" && zip -qr "$GITHUB_WORKSPACE/dist/${{ matrix.project }}-offline.zip" .)
+          ls -lh dist/
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.project }}-offline
+          path: dist/${{ matrix.project }}-offline.zip
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+      - name: 写入构建摘要
+        run: |
+          {
+            echo "### ${{ matrix.project }} 离线文档"
+            echo ''
+            echo "- 上游 ref: \`${{ inputs.ref }}\`"
+            echo "- 产物: \`${{ matrix.project }}-offline.zip\` ($(du -h "dist/${{ matrix.project }}-offline.zip" | cut -f1))"
+            echo "- 已关闭 Google Fonts / fathom 统计，外链图片由 privacy 插件本地化"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    name: 发布 Release
+    needs: [build]
+    if: inputs.publish_release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 汇总产物
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: 创建 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="astral-offline-$(date -u +%Y%m%d)-${{ github.run_number }}"
+          gh release create "$tag" dist/*.zip \
+            --title "Astral 离线文档 $tag" \
+            --notes "手动触发的离线文档构建。上游 ref: \`${{ inputs.ref }}\`，项目: ${{ inputs.project }}。触发人: @${{ github.actor }}"
+          echo "已发布: $tag" >> "$GITHUB_STEP_SUMMARY"

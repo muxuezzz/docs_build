@@ -1,0 +1,49 @@
+diff --git a/docs/.overrides/main.html b/docs/.overrides/main.html
+index 07cd6bc02d..7f89d0eca1 100644
+--- a/docs/.overrides/main.html
++++ b/docs/.overrides/main.html
+@@ -11,11 +11,7 @@
+ {% endblock %}
+ 
+ {% block extrahead %}
+-<link rel="apple-touch-icon" sizes="180x180" href="https://docs.astral.sh/static/apple-touch-icon.png"/>
+-<link rel="icon" type="image/png" sizes="32x32" href="https://docs.astral.sh/static/favicon-32x32.png"/>
+-<link rel="icon" type="image/png" sizes="16x16" href="https://docs.astral.sh/static/favicon-16x16.png"/>
+-<link rel="manifest" href="https://docs.astral.sh/static/site.webmanifest"/>
+-<link rel="mask-icon" href="https://docs.astral.sh/static/safari-pinned-tab.svg" color="#2e183d"/>
++{# 离线构建：去掉 docs.astral.sh 上的图标/manifest 外链，改用 theme.favicon #}
+ <meta name="msapplication-TileColor" content="#d7ff64"/>
+ <meta name="theme-color" content="#ffffff"/>
+ <meta name="robots" content="index,follow"/>
+diff --git a/mkdocs.template.yml b/mkdocs.template.yml
+index 5b78cfbeac..fdf30d2e99 100644
+--- a/mkdocs.template.yml
++++ b/mkdocs.template.yml
+@@ -1,6 +1,8 @@
+ site_name: Ruff
+ theme:
+   name: material
++  # 离线构建：不加载 Google Fonts
++  font: false
+   logo: assets/bolt.svg
+   favicon: assets/favicon.ico
+   features:
+@@ -102,6 +104,9 @@ plugins:
+           - versioning.md
+         Reference:
+           - faq.md
++  # 离线构建：privacy 把外链资源本地化，offline 让站点可脱离网络/服务器浏览
++  - privacy
++  - offline
+ extra_css:
+   - stylesheets/extra.css
+   - stylesheets/rule-filters.css
+@@ -112,8 +117,6 @@ not_in_nav: |
+   /rules/*
+   /formatter/*
+ extra:
+-  analytics:
+-    provider: fathom
+   social:
+     - icon: fontawesome/brands/github
+       link: https://github.com/astral-sh/ruff

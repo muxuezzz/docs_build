@@ -1,0 +1,118 @@
+name: 离线文档 · Pi 中文文档
+
+# rspress 站点，本身已是中文且无外部资源依赖，直接构建即可。
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 上游 git ref
+        type: string
+        default: master
+      publish_release:
+        description: 构建完成后发布到 GitHub Release
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        default: master
+      publish_release:
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: offline-pi-${{ inputs.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 构建 Pi 文档
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: 检出构建仓库
+        uses: actions/checkout@v4
+        with:
+          path: build-tools
+
+      - name: 检出上游源码
+        uses: actions/checkout@v4
+        with:
+          repository: Q-Peppa/Q-Peppa.github.io
+          ref: ${{ inputs.ref }}
+          path: src
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: src/.node-version
+          cache: pnpm
+          cache-dependency-path: src/pnpm-lock.yaml
+
+      - name: 安装依赖
+        working-directory: src
+        run: pnpm install --frozen-lockfile
+
+      - name: 构建站点
+        run: bash build-tools/scripts/build-pi.sh src out/pi
+
+      - name: 打包为 zip
+        run: |
+          mkdir -p dist
+          (cd out/pi && zip -qr -6 "$GITHUB_WORKSPACE/dist/pi-docs-offline.zip" .)
+          ls -lh dist/
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: pi-docs-offline
+          path: dist/pi-docs-offline.zip
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+      - name: 写入构建摘要
+        run: |
+          {
+            echo "### Pi 中文文档"
+            echo ''
+            echo "- 上游 ref: \`${{ inputs.ref }}\`"
+            echo "- 产物: \`pi-docs-offline.zip\` ($(du -h dist/pi-docs-offline.zip | cut -f1))"
+            echo "- 解压后用静态服务器打开（rspress 使用根路径资源）"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    name: 发布 Release
+    needs: [build]
+    if: inputs.publish_release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 汇总产物
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: 创建 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="pi-docs-offline-$(date -u +%Y%m%d)-${{ github.run_number }}"
+          gh release create "$tag" dist/*.zip \
+            --title "Pi 中文文档离线包 $tag" \
+            --notes "手动触发的离线文档构建。上游 ref: \`${{ inputs.ref }}\`。触发人: @${{ github.actor }}"
+          echo "已发布: $tag" >> "$GITHUB_STEP_SUMMARY"

@@ -7,7 +7,9 @@
 # 期望的目录布局:
 #   <源码根目录>/vllm-ascend   —— vllm-project/vllm-ascend 的本地克隆
 #   <源码根目录>/recipes       —— vllm-project/recipes 的本地克隆
+#   <源码根目录>/ruff|uv|ty    —— astral-sh/ruff|uv|ty 的本地克隆
 #
+# Q-Peppa.github.io（Pi 文档）不需要补丁，因此不在列表里。
 # 只导出已跟踪文件的改动（git diff），未跟踪文件不会进补丁。
 set -euo pipefail
 
@@ -19,7 +21,7 @@ if [ ! -d "$src_root" ]; then
   exit 1
 fi
 
-for name in vllm-ascend recipes; do
+for name in vllm-ascend recipes ruff uv ty; do
   repo="$src_root/$name"
   if [ ! -d "$repo/.git" ]; then
     echo "跳过（不是 git 仓库）: $repo" >&2

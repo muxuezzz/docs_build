@@ -1,0 +1,76 @@
+diff --git a/.gitignore b/.gitignore
+index 85bf43971..3d6ec48db 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -61,3 +61,6 @@ profile.json.gz
+ .codex/skills/*
+ !.codex/skills/load-github-action-thread/
+ !.codex/skills/load-github-action-thread/**
++
++# mkdocs privacy 插件缓存
++.cache/
+diff --git a/docs/.overrides/main.html b/docs/.overrides/main.html
+index ce195ee79..747ec050a 100644
+--- a/docs/.overrides/main.html
++++ b/docs/.overrides/main.html
+@@ -6,29 +6,7 @@ page.meta.title %}
+ {% else %}
+ <title>{{ config.site_name }}</title>
+ {% endif %} {% endblock %} {% block extrahead %}
+-<link
+-  rel="apple-touch-icon"
+-  sizes="180x180"
+-  href="https://docs.astral.sh/static/apple-touch-icon.png"
+-/>
+-<link
+-  rel="icon"
+-  type="image/png"
+-  sizes="32x32"
+-  href="https://docs.astral.sh/static/favicon-32x32.png"
+-/>
+-<link
+-  rel="icon"
+-  type="image/png"
+-  sizes="16x16"
+-  href="https://docs.astral.sh/static/favicon-16x16.png"
+-/>
+-<link rel="manifest" href="https://docs.astral.sh/static/site.webmanifest" />
+-<link
+-  rel="mask-icon"
+-  href="https://docs.astral.sh/static/safari-pinned-tab.svg"
+-  color="#2e183d"
+-/>
++{# 离线构建：去掉 docs.astral.sh 上的图标/manifest 外链，改用 theme.favicon #}
+ <meta name="msapplication-TileColor" content="#d7ff64" />
+ <meta name="theme-color" content="#ffffff" />
+ <meta name="robots" content="index,follow" />
+diff --git a/mkdocs.yml b/mkdocs.yml
+index 2d6caa984..4aff1e3f5 100644
+--- a/mkdocs.yml
++++ b/mkdocs.yml
+@@ -1,6 +1,8 @@
+ site_name: uv
+ theme:
+   name: material
++  # 离线构建：不加载 Google Fonts
++  font: false
+   logo: assets/logo-letter.svg
+   favicon: assets/favicon.ico
+   features:
+@@ -164,13 +166,14 @@ plugins:
+           - reference/environment.md
+           - reference/installer.md
+           - reference/contributing.md
++  # 离线构建：privacy 把外链资源本地化，offline 让站点可脱离网络/服务器浏览
++  - privacy
++  - offline
+ extra_css:
+   - stylesheets/extra.css
+ extra_javascript:
+   - js/extra.js
+ extra:
+-  analytics:
+-    provider: fathom
+   social:
+     - icon: fontawesome/brands/github
+       link: https://github.com/astral-sh/uv
