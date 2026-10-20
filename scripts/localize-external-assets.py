@@ -164,7 +164,26 @@ class Downloader:
         return self.mapping.get(url)
 
 
-def rewrite_tag(tag: str, tag_name: str, dl: Downloader, found: set[str]) -> str:
+def rel_prefix(page_path: str, dest: str) -> str:
+    """页面所在目录到外链副本目录的相对路径，如 '../..'。
+
+    MkDocs 的 offline 插件让站点能从 file:// 直接打开，根路径 /assets/... 在那种
+    场景下会指向磁盘根目录，所以一律写相对路径。
+    """
+    rel = os.path.relpath(dest, os.path.dirname(page_path)).replace(os.sep, "/")
+    return "" if rel == "." else rel
+
+
+def localize(loc: str | None, base: str) -> str | None:
+    """把 /assets/external/x.png 拼成相对当前页面的路径。"""
+    if not loc:
+        return None
+    name = loc.rsplit("/", 1)[-1]
+    return f"{base}/{name}" if base else name
+
+
+def rewrite_tag(tag: str, tag_name: str, dl: Downloader, found: set[str],
+                base: str = "") -> str:
     """改写单个标签里所有会发请求的属性。"""
     tag_name = tag_name.lower()
 
@@ -177,6 +196,7 @@ def rewrite_tag(tag: str, tag_name: str, dl: Downloader, found: set[str]) -> str
             return m.group(0)
         if name == "srcset":
             parts = []
+            changed = False
             for item in val.split(","):
                 item = item.strip()
                 if not item:
@@ -186,12 +206,15 @@ def rewrite_tag(tag: str, tag_name: str, dl: Downloader, found: set[str]) -> str
                 desc = f" {bits[1]}" if len(bits) > 1 else ""
                 if is_external(u):
                     found.add(u)
-                    loc = dl.local(u)
+                    loc = localize(dl.local(u), base)
                     if loc:
                         parts.append(loc + desc)
+                        changed = True
                         continue
                 parts.append(item)
-            return f"{head}{quote}{','.join(parts)}{quote}"
+            if not changed:
+                return m.group(0)
+            return f"{head}{quote}{', '.join(parts)}{quote}"
         if not is_external(val):
             return m.group(0)
         if tag_name == "link":
@@ -200,7 +223,7 @@ def rewrite_tag(tag: str, tag_name: str, dl: Downloader, found: set[str]) -> str
             if not (rels & FETCHING_LINK_REL):
                 return m.group(0)
         found.add(val)
-        loc = dl.local(val)
+        loc = localize(dl.local(val), base)
         return f"{head}{quote}{loc or val}{quote}"
 
     return ATTR_RE.sub(attr_sub, tag)
@@ -222,6 +245,7 @@ def process_html(path: str, dl: Downloader, found: set[str], keep_iframes: bool,
     with open(path, encoding="utf-8", errors="surrogateescape") as fh:
         text = fh.read()
     original = text
+    base = rel_prefix(path, dl.dest)
 
     if not keep_iframes:
         def iframe_sub(m: re.Match) -> str:
@@ -236,7 +260,7 @@ def process_html(path: str, dl: Downloader, found: set[str], keep_iframes: bool,
         text = IFRAME_RE.sub(iframe_sub, text)
 
     def tag_sub(m: re.Match) -> str:
-        return rewrite_tag(m.group(0), m.group(1), dl, found)
+        return rewrite_tag(m.group(0), m.group(1), dl, found, base)
 
     text = TAG_RE.sub(tag_sub, text)
     # <link>/<script> 里的 target_blank 之类无所谓，只看上面筛过的属性
@@ -255,12 +279,13 @@ def process_css(path: str, dl: Downloader, found: set[str]) -> bool:
     with open(path, encoding="utf-8", errors="surrogateescape") as fh:
         text = fh.read()
     original = text
+    base = rel_prefix(path, dl.dest)
 
     def url_sub(m: re.Match) -> str:
         u = m.group(2)
         if is_external(u):
             found.add(u)
-            loc = dl.local(u)
+            loc = localize(dl.local(u), base)
             if loc:
                 return f"url({m.group(1)}{loc}{m.group(1)})"
         return m.group(0)
@@ -269,7 +294,7 @@ def process_css(path: str, dl: Downloader, found: set[str]) -> bool:
         u = m.group(1)
         if is_external(u):
             found.add(u)
-            loc = dl.local(u)
+            loc = localize(dl.local(u), base)
             if loc:
                 return f'@import url("{loc}")'
         return m.group(0)

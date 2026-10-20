@@ -105,6 +105,26 @@ index 320e44910..3fa7a6194 100644
        `;
  
        slackButton.addEventListener('click', () => {
+diff --git a/docs/mkdocs/overrides/partials/source.html b/docs/mkdocs/overrides/partials/source.html
+new file mode 100644
+index 000000000..8d8ce48d3
+--- /dev/null
++++ b/docs/mkdocs/overrides/partials/source.html
+@@ -0,0 +1,14 @@
++{#-
++  离线化定制：与 Material 自带 partial 的唯一区别是去掉了 data-md-component="source"。
++  该组件会让 bundle 在运行时请求 https://api.github.com/repos/<repo> 拉 star 数与
++  最新 release 版本，断网时会挂在 pending 上白等。
++-#}
++<a href="{{ config.repo_url }}" title="{{ lang.t('source') }}" class="md-source">
++  <div class="md-source__icon md-icon">
++    {% set icon = config.theme.icon.repo or "fontawesome/brands/git-alt" %}
++    {% include ".icons/" ~ icon ~ ".svg" %}
++  </div>
++  <div class="md-source__repository">
++    {{ config.repo_name }}
++  </div>
++</a>
 diff --git a/mkdocs.yml b/mkdocs.yml
 index c53712518..fab0802cd 100644
 --- a/mkdocs.yml

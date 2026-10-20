@@ -72,7 +72,13 @@ echo "[build] mkdocs build (site_url=$site_url)"
 # mkdocs 没有 --site-url 选项，补丁把 mkdocs.yml 的 site_url 改成读 OFFLINE_SITE_URL
 export OFFLINE_SITE_URL="$site_url"
 # 不用 --strict：构建结束再单独检查外链（audit-offline.py）
-mkdocs build --site-dir "$out" 2>&1 | tail -40
+# BUILD_LOG 可选：把完整构建日志落盘，便于观察长耗时构建（约 1800 页虚拟 API 页）
+if [ -n "${BUILD_LOG:-}" ]; then
+  mkdir -p "$(dirname "$BUILD_LOG")"
+  mkdocs build --site-dir "$out" -v 2>&1 | tee "$BUILD_LOG" | tail -40
+else
+  mkdocs build --site-dir "$out" 2>&1 | tail -40
+fi
 
 # 外链本地化：material 的 privacy 插件下载时没有超时，一个不可达的域名就能把
 # 整次构建挂死，所以改用这个脚本（并发下载、有超时、失败只降级）

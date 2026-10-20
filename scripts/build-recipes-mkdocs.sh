@@ -9,7 +9,7 @@ set -euo pipefail
 
 src=${1:?用法: build-recipes-mkdocs.sh <源码目录> <输出目录> [站点根地址]}
 out=${2:?用法: build-recipes-mkdocs.sh <源码目录> <输出目录> [站点根地址]}
-site_url=${3:-http://vllm-recipes/docx.cw.com/}
+site_url=${3:-http://vllm-recipes.internal/}
 
 src=$(cd "$src" && pwd)
 mkdir -p "$out"

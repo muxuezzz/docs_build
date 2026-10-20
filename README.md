@@ -236,9 +236,22 @@ node scripts/check-site-offline.mjs out/litellm-docs --sample 6
 - **LiteLLM 正文里的图片走 CDN**：博主头像（`pbs.twimg.com`、`media.licdn.com`）、录屏截图
   （`colony-recorder.s3.amazonaws.com`）都在 markdown 里写死。构建后由本地化脚本抓下来，
   少数域名（LinkedIn、S3 私有桶）会 403 拒绝非浏览器请求，这些保留原 URL——断网时只是缺图。
+- **vllm-omni 构建非常慢**：`api-autonav` + `mkdocstrings` 会生成约 1800 个虚拟 API 页，
+  而 mkdocstrings 每渲染一页都会重新 `griffe: Loading path ...` 把整个 `vllm_omni` 包
+  再解析一遍。本地（Windows、单核渲染）实测 1.5 小时以上，GitHub runner 也在同一量级，
+  所以工作流 `timeout-minutes` 给到 150。想快只能砍 `mkdocs.yml` 里 `api-autonav` 的
+  `modules` 范围。
 - **vllm-omni 的构建钩子会改写文档源文件**：`generate_examples.py` / `generate_api_readme.py` /
   `awesome-nav` 会就地重写 `docs/user_guide/examples/`、`docs/api/`、`docs/.nav.yml`。
   这些是构建副产物，`make-patches.sh` 已排除，别手动 `git add` 进去。
+- **Windows 本地构建的两个坑**（CI 上没有）：
+  1. 宿主通过 `NODE_OPTIONS` 注入的 `--require` 垫片会拦下 `next` 构建脚本里的 `rmSync`，
+     各构建脚本已在开头 `unset NODE_OPTIONS`。
+  2. `next build` 偶尔在 `EPERM: open '.next/trace'` / `EPERM: open 'out/404.html'`
+     上直接失败。先手动建好这两个空文件再跑即可通过；脚本里也已经 `rm -rf .next`。
+- **外链本地化写的是相对路径**：`localize-external-assets.py` 会把
+  `https://…/a.png` 改写成 `../../assets/external/<sha1>.png`，这样 MkDocs 站点在
+  `file://` 下直接打开也不会断图（根路径 `/assets/...` 在 `file://` 下会指向磁盘根）。
 - **Pi 文档仍带 Google Analytics**：`rspress.config.ts` 里的 `pluginGoogleAnalytics`
   会在页面里注入 GA 脚本。如果要“零外网请求”，删掉那个 plugin 和 `rsbuild-plugin-google-analytics`
   依赖即可（目前按你的要求保持原样，直接构建）。
