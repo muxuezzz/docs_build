@@ -1,0 +1,132 @@
+diff --git a/docusaurus.config.js b/docusaurus.config.js
+index 9031dc44..1ff4ccec 100644
+--- a/docusaurus.config.js
++++ b/docusaurus.config.js
+@@ -245,68 +245,8 @@ const config = {
+       },
+     ],
+ 
+-    // PostHog product analytics. Same project as the Webflow marketing site
+-    // (www.litellm.ai), so a visitor moving between the two domains is one
+-    // person and one journey: persistence keeps a first-party cookie on
+-    // .litellm.ai, which every litellm.ai subdomain can read.
+-    // Uses the official posthog-docusaurus plugin, which is production-only
+-    // by default (mirroring the gtag setup below) and forwards every extra
+-    // option below to posthog.init via JSON.stringify.
+-    //
+-    // capture_pageview is false because the plugin ships a client module whose
+-    // onRouteUpdate captures $pageview on the initial load and on every
+-    // Docusaurus route change. Leaving the SDK's own pageview on as well logs
+-    // every landing page twice.
+-    //
+-    // $pageleave and dead clicks are on for docs UX analysis: time on page,
+-    // bounce rate and scroll depth, plus clicks on things readers expect to be
+-    // links. capture_pageleave must be an explicit true, since the SDK default
+-    // only captures it when capture_pageview is on.
+-    //
+-    // Kept off the docs on purpose, so this stays analytics and nothing else:
+-    // no session replay (no rrweb bundle downloaded, no DOM observation;
+-    // replay is scoped to litellm.ai/enterprise and /pricing by URL trigger in
+-    // the project settings), no heatmap capture despite the project-level
+-    // opt-in (skips the mousemove listener and its periodic requests; link and
+-    // button clicks are already captured with their hrefs by autocapture).
+-    // Surveys are off too, which drops the surveys.js request the SDK
+-    // otherwise makes on every page; docs feedback already goes through
+-    // Feedback Rocket below.
+-    [
+-      'posthog-docusaurus',
+-      {
+-        apiKey: 'phc_upsFA5iBuDFKnznEdV9pA5HYW8fwsLMJ8pF2p4xZzzpD',
+-        appUrl: 'https://us.i.posthog.com',
+-        enableInDevelopment: false,
+-        defaults: '2026-05-30',
+-        person_profiles: 'identified_only',
+-        cross_subdomain_cookie: true,
+-        capture_pageview: false,
+-        capture_pageleave: true,
+-        capture_dead_clicks: true,
+-        disable_session_recording: true,
+-        capture_heatmaps: false,
+-        disable_surveys: true,
+-        autocapture: {
+-          dom_event_allowlist: ['click'],
+-          element_allowlist: ['a', 'button'],
+-        },
+-      },
+-    ],
+-    // Ensure gtag exists before the GA script loads.
+-    () => ({
+-      name: 'gtag-shim',
+-      injectHtmlTags() {
+-        return {
+-          headTags: [
+-            {
+-              tagName: 'script',
+-              innerHTML: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}if(!window.gtag){window.gtag=gtag;}`,
+-            },
+-          ],
+-        };
+-      },
+-    }),
++    // 离线构建：移除了 PostHog 与 GA4(gtag) 两个插件，
++    // 否则每个页面都会从 us.i.posthog.com / googletagmanager.com 拉脚本。
+   ],
+ 
+   presets: [
+@@ -314,19 +254,8 @@ const config = {
+       'classic',
+       /** @type {import('@docusaurus/preset-classic').Options} */
+       ({
+-        gtag:
+-          process.env.NODE_ENV === 'production'
+-            ? {
+-                // Two GA4 destinations. G-K7K215ZVNC is the docs property and
+-                // stays first: plugin-google-gtag uses trackingID[0] for the
+-                // gtag.js loader URL and emits one gtag('config', ...) per id.
+-                // G-G3LG9H6J6B is the canonical litellm.ai property, also on the
+-                // Webflow marketing site, so a visitor moving between
+-                // www.litellm.ai and docs.litellm.ai stays in one session.
+-                trackingID: ['G-K7K215ZVNC', 'G-G3LG9H6J6B'],
+-                anonymizeIP: true,
+-              }
+-            : undefined,
++        // 离线构建：关闭 GA4
++        gtag: undefined,
+         docs: {
+           sidebarPath: require.resolve('./sidebars.js'),
+           beforeDefaultRemarkPlugins: [require('./src/remark/docs-models')],
+@@ -356,14 +285,8 @@ const config = {
+     mermaid: true,
+   },
+ 
+-  scripts: [
+-    {
+-      async: true,
+-      src: 'https://www.feedbackrocket.io/sdk/v1.2.js',
+-      'data-fr-id': 'GQwepB0f0L-x_ZH63kR_V',
+-      'data-fr-theme': 'dynamic',
+-    }
+-  ],
++  // 离线构建：原为 feedbackrocket.io 的 SDK
++  scripts: [],
+ 
+   themeConfig:
+     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
+diff --git a/src/css/custom.css b/src/css/custom.css
+index 8d7c42d6..5b9736ac 100644
+--- a/src/css/custom.css
++++ b/src/css/custom.css
+@@ -6,11 +6,9 @@
+ /* =========================================
+    FONTS
+    ========================================= */
+-/* Preview: Geist from Google Fonts, same loading path as the Inter import it
+-   replaces. The PR self-hosts the woff2 files from static/fonts instead. */
+-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap');
++/* 离线构建：原来从 fonts.googleapis.com @import Geist / IBM Plex / JetBrains Mono,
++   断网打开会先卡在字体请求上。这里去掉 @import，字体回退到下方 var() 的系统字体栈。 */
+ /* Used only by the litellm.harness docs block at the end of this file */
+-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+ 
+ /* =========================================
+    ROOT — Light Mode Variables

@@ -1,7 +1,8 @@
 # docs-build
 
-用 GitHub Actions 手动触发构建 **离线文档站点**。覆盖 5 个上游项目：
-vllm-ascend、recipes（vllm-project）、ruff / uv / ty（astral-sh）、Pi 中文文档。
+用 GitHub Actions 手动触发构建 **离线文档站点**。覆盖 8 个上游项目：
+vllm-ascend、recipes（vllm-project）、ruff / uv / ty（astral-sh）、Pi 中文文档、
+litellm-docs（BerriAI）、vllm-omni（vllm-project）。
 本仓库只存放「构建编排 + 离线化补丁」，不改动上游。
 
 ## 它是怎么工作的
@@ -25,6 +26,8 @@ GitHub Actions（手动触发）
 | `.github/workflows/build-recipes.yml` | vLLM Recipes 的两套站点（MkDocs + Next.js） |
 | `.github/workflows/build-astral.yml` | ruff / uv / ty 三个 MkDocs 站点（矩阵并行） |
 | `.github/workflows/build-pi.yml` | Pi 中文文档（rspress，无需补丁） |
+| `.github/workflows/build-litellm.yml` | LiteLLM 文档（Docusaurus 3.8） |
+| `.github/workflows/build-vllm-omni.yml` | vLLM-Omni 文档（MkDocs + mkdocstrings） |
 | `.github/workflows/build-all.yml` | 一键构建以上全部 |
 | `patches/*/offline.patch` | 各项目的离线化补丁（详见下表） |
 | `scripts/apply-patches.sh` | 在 CI 中按序打补丁 |
@@ -40,6 +43,8 @@ GitHub Actions（手动触发）
 | `patches/ruff` | 在 `mkdocs.template.yml` 里加 `font: false` + `privacy`/`offline`，去 fathom 统计，去 docs.astral.sh 图标外链，`source.html` 去掉 `api.github.com` 请求 |
 | `patches/uv` | 同 ruff（配置在 `mkdocs.yml`） |
 | `patches/ty` | 同 ruff（配置在 `mkdocs.yml`） |
+| `patches/litellm-docs` | 去掉 PostHog / GA4 / FeedbackRocket 三个运行时脚本与 Google Fonts `@import` |
+| `patches/vllm-omni` | `font: false` + `privacy`/`offline`，Slack 图标改内联 SVG，MathJax / Mermaid 改本地副本，`site_url` 支持环境变量覆盖 |
 
 ### 为什么会有 `overrides/partials/source.html`
 

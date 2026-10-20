@@ -1,0 +1,128 @@
+name: 离线文档 · LiteLLM
+
+# LiteLLM 文档是 Docusaurus 3.8 站点，产物是纯静态 HTML + JS，
+# 但资源路径是 / 开头的绝对路径，必须用静态服务器访问（不能 file:// 双击）。
+#
+# 离线化补丁去掉的三处运行时外链：
+#   - PostHog 产品分析插件
+#   - GA4（preset 的 gtag）
+#   - feedbackrocket.io 的 SDK（config.scripts）
+# 另外 src/css/custom.css 里两条 Google Fonts @import 也删掉，改走系统字体栈。
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 上游 git ref
+        type: string
+        default: main
+      publish_release:
+        description: 构建完成后发布到 GitHub Release
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        default: main
+      publish_release:
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: offline-litellm-${{ inputs.ref }}
+  cancel-in-progress: true
+
+env:
+  PROJECT: litellm-docs
+  # package.json engines 要求 node >= 22.18
+  NODE_VERSION: '22'
+
+jobs:
+  build:
+    name: 构建 LiteLLM 文档站
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: 检出构建仓库（补丁与脚本）
+        uses: actions/checkout@v4
+        with:
+          path: build-tools
+
+      - name: 检出上游源码
+        uses: actions/checkout@v4
+        with:
+          repository: BerriAI/litellm-docs
+          ref: ${{ inputs.ref }}
+          path: src
+          fetch-depth: 1
+          submodules: false
+          persist-credentials: false
+
+      - name: 应用离线化补丁
+        run: bash build-tools/scripts/apply-patches.sh src build-tools/patches/${{ env.PROJECT }}
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+
+      - name: 构建站点
+        run: bash build-tools/scripts/build-litellm-docs.sh src "out/${{ env.PROJECT }}"
+
+      - name: 离线体检
+        run: python3 build-tools/scripts/audit-offline.py "out/${{ env.PROJECT }}" | head -40
+
+      - name: 打包为 zip
+        run: |
+          mkdir -p dist
+          (cd "out/${{ env.PROJECT }}" && zip -qr "$GITHUB_WORKSPACE/dist/${{ env.PROJECT }}-offline.zip" .)
+          ls -lh dist/
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PROJECT }}-offline
+          path: dist/${{ env.PROJECT }}-offline.zip
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+      - name: 写入构建摘要
+        run: |
+          {
+            echo "### LiteLLM 离线文档"
+            echo ''
+            echo "- 上游 ref: \`${{ inputs.ref }}\`"
+            echo "- 产物: \`${{ env.PROJECT }}-offline.zip\` ($(du -h "dist/${{ env.PROJECT }}-offline.zip" | cut -f1))"
+            echo "- 已移除 PostHog / GA4 / FeedbackRocket 与 Google Fonts，需用静态服务器访问"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    name: 发布 Release
+    needs: [build]
+    if: inputs.publish_release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 汇总产物
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: 创建 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="litellm-offline-$(date -u +%Y%m%d)-${{ github.run_number }}"
+          gh release create "$tag" dist/*.zip \
+            --title "LiteLLM 离线文档 $tag" \
+            --notes "手动触发的离线文档构建。上游 ref: \`${{ inputs.ref }}\`。触发人: @${{ github.actor }}"
+          echo "已发布: $tag" >> "$GITHUB_STEP_SUMMARY"

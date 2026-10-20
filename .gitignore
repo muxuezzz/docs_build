@@ -5,5 +5,11 @@
 *.zip
 .DS_Store
 
+# 本地构建日志与审计报告
+.*-build.log
+.*-verbose.log
+.lit-*.json
+*.audit.json
+
 # WorkBuddy 本地记忆，不入库
 .workbuddy/

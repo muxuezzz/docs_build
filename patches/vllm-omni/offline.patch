@@ -1,0 +1,140 @@
+diff --git a/.gitignore b/.gitignore
+index 6b26bcaa7..995b9cd94 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -289,3 +289,6 @@ lance_compare/
+ 
+ # Linting binaries downloaded by local pre-commit hooks
+ shellcheck*/
++
++# 离线构建：build-vllm-omni.sh 下载的 MathJax 运行时
++/docs/mkdocs/javascript/vendor/
+diff --git a/docs/mkdocs/javascript/mathjax.js b/docs/mkdocs/javascript/mathjax.js
+index 2238e32e4..6729a4429 100644
+--- a/docs/mkdocs/javascript/mathjax.js
++++ b/docs/mkdocs/javascript/mathjax.js
+@@ -14,6 +14,21 @@ window.MathJax = {
+ 
+ let mathJaxLoading;
+ 
++// 离线构建：MathJax 由构建脚本下载到 javascript/vendor/ 并随站点打包，不再从 unpkg 拉取。
++// 脚本解析时（document.currentScript 有效）记下自身所在目录——放到回调里再读会拿到 null，
++// 那时相对路径会按页面层级解析，子目录页面就 404 了。
++const MATHJAX_BASE = (function () {
++  const self = document.currentScript && document.currentScript.src;
++  return self ? self.replace(/[^/]*$/, "") : null;
++})();
++
++function mathJaxVendorUrl() {
++  if (MATHJAX_BASE) {
++    return MATHJAX_BASE + "vendor/mathjax/tex-mml-chtml.js";
++  }
++  return "javascript/vendor/mathjax/tex-mml-chtml.js";
++}
++
+ function loadMathJax() {
+   if (window.MathJax.typesetPromise) {
+     return Promise.resolve();
+@@ -21,7 +36,7 @@ function loadMathJax() {
+   if (!mathJaxLoading) {
+     mathJaxLoading = new Promise((resolve, reject) => {
+       const script = document.createElement("script");
+-      script.src = "https://unpkg.com/mathjax@3.2.2/es5/tex-mml-chtml.js";
++      script.src = mathJaxVendorUrl();
+       script.async = true;
+       script.onload = resolve;
+       script.onerror = reject;
+diff --git a/docs/mkdocs/javascript/mermaid.js b/docs/mkdocs/javascript/mermaid.js
+index f8fae2d47..77afd3b10 100644
+--- a/docs/mkdocs/javascript/mermaid.js
++++ b/docs/mkdocs/javascript/mermaid.js
+@@ -1,6 +1,21 @@
+ // Load Mermaid only on pages that contain diagrams.
+ let mermaidLoading;
+ 
++// 离线构建：Mermaid 由构建脚本下载到 javascript/vendor/ 并随站点打包，不再从 unpkg 拉取。
++// 脚本解析时（document.currentScript 有效）记下自身所在目录，之后无论页面在
++// 哪一层子目录，都能拼出正确的绝对地址。
++const MERMAID_BASE = (function () {
++  const self = document.currentScript && document.currentScript.src;
++  return self ? self.replace(/[^/]*$/, "") : null;
++})();
++
++function mermaidVendorUrl() {
++  if (MERMAID_BASE) {
++    return MERMAID_BASE + "vendor/mermaid/mermaid.min.js";
++  }
++  return "javascript/vendor/mermaid/mermaid.min.js";
++}
++
+ function loadMermaid() {
+   if (window.mermaid) {
+     return Promise.resolve();
+@@ -8,7 +23,7 @@ function loadMermaid() {
+   if (!mermaidLoading) {
+     mermaidLoading = new Promise((resolve, reject) => {
+       const script = document.createElement("script");
+-      script.src = "https://unpkg.com/mermaid@10/dist/mermaid.min.js";
++      script.src = mermaidVendorUrl();
+       script.async = true;
+       script.onload = () => {
+         mermaid.initialize({
+diff --git a/docs/mkdocs/javascript/slack_and_forum.js b/docs/mkdocs/javascript/slack_and_forum.js
+index 320e44910..3fa7a6194 100644
+--- a/docs/mkdocs/javascript/slack_and_forum.js
++++ b/docs/mkdocs/javascript/slack_and_forum.js
+@@ -16,10 +16,18 @@ window.addEventListener('DOMContentLoaded', () => {
+       slackButton.style.background = 'transparent';
+       slackButton.style.cursor = 'pointer';
+ 
++      // 离线构建：原实现用 <img src="https://a.slack-edge.com/...">，每个页面
++      // 打开都会请求外网图标。改为内联 SVG，图标随页面一起离线。
+       slackButton.innerHTML = `
+-        <img src="https://a.slack-edge.com/80588/marketing/img/icons/icon_slack_hash_colored.png"
+-             style="height: 1.1rem;"
+-             alt="Slack">
++        <svg
++          xmlns="http://www.w3.org/2000/svg"
++          viewBox="0 0 24 24"
++          fill="currentColor"
++          aria-hidden="true"
++          style="height: 1.1rem; width: 1.1rem;"
++        >
++          <path d="M5.04 15.16a2.02 2.02 0 1 1-2.02-2.02h2.02v2.02Zm1.02 0a2.02 2.02 0 0 1 4.04 0v5.06a2.02 2.02 0 1 1-4.04 0v-5.06ZM7.07 5.04a2.02 2.02 0 1 1 2.02-2.02v2.02H7.07Zm0 1.02a2.02 2.02 0 0 1 0 4.04H2.02a2.02 2.02 0 1 1 0-4.04h5.05Zm11.89 1.01a2.02 2.02 0 1 1 2.02 2.02h-2.02V7.07Zm-1.02 0a2.02 2.02 0 0 1-4.04 0V2.02a2.02 2.02 0 1 1 4.04 0v5.05Zm-1.01 11.89a2.02 2.02 0 1 1-2.02 2.02v-2.02h2.02Zm0-1.02a2.02 2.02 0 0 1 0-4.04h5.05a2.02 2.02 0 1 1 0 4.04h-5.05Z"/>
++        </svg>
+       `;
+ 
+       slackButton.addEventListener('click', () => {
+diff --git a/mkdocs.yml b/mkdocs.yml
+index c53712518..71996bb12 100644
+--- a/mkdocs.yml
++++ b/mkdocs.yml
+@@ -1,7 +1,7 @@
+ site_name: vLLM-Omni
+ site_description: Efficient omni-modality model serving for everyone
+ site_author: vLLM-Omni Team
+-site_url: https://vllm-project.github.io/vllm-omni/
++site_url: !ENV [OFFLINE_SITE_URL, "https://vllm-project.github.io/vllm-omni/"]
+ 
+ repo_name: vllm-project/vllm-omni
+ repo_url: https://github.com/vllm-project/vllm-omni
+@@ -13,6 +13,8 @@ copyright: Copyright &copy; 2026 vLLM-Omni Team
+ # Theme
+ theme:
+   name: material
++  # 离线构建：Material 默认从 fonts.googleapis.com 拉 Roboto/Fira
++  font: false
+   logo: source/logos/vllm-logo-only-light.ico
+   favicon: source/logos/vllm-logo-only-light.ico
+   palette:
+@@ -69,6 +71,10 @@ exclude_docs: |
+ plugins:
+   - meta
+   - search
++  # 离线构建：privacy 把外链图片/脚本下载到 assets/external，
++  # offline 让站点在 file:// 下也能用搜索与导航缓存
++  - privacy
++  - offline
+   - autorefs
+   - awesome-nav
+   - redirects:

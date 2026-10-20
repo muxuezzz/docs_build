@@ -20,6 +20,14 @@ on:
         type: choice
         options: [all, ruff, uv, ty, none]
         default: all
+      litellm:
+        description: LiteLLM 文档（Docusaurus）
+        type: boolean
+        default: true
+      vllm_omni:
+        description: vLLM-Omni 文档（MkDocs）
+        type: boolean
+        default: true
       ref_vllm_ascend:
         description: vllm-ascend 上游 ref
         type: string
@@ -36,6 +44,14 @@ on:
         description: Pi 文档上游 ref
         type: string
         default: master
+      ref_litellm:
+        description: litellm-docs 上游 ref
+        type: string
+        default: main
+      ref_vllm_omni:
+        description: vllm-omni 上游 ref
+        type: string
+        default: main
       publish_release:
         description: 构建完成后发布到 GitHub Release
         type: boolean
@@ -79,4 +95,20 @@ jobs:
     uses: ./.github/workflows/build-pi.yml
     with:
       ref: ${{ inputs.ref_pi }}
+      publish_release: ${{ inputs.publish_release }}
+
+  litellm:
+    name: LiteLLM
+    if: inputs.litellm
+    uses: ./.github/workflows/build-litellm.yml
+    with:
+      ref: ${{ inputs.ref_litellm }}
+      publish_release: ${{ inputs.publish_release }}
+
+  vllm-omni:
+    name: vLLM-Omni
+    if: inputs.vllm_omni
+    uses: ./.github/workflows/build-vllm-omni.yml
+    with:
+      ref: ${{ inputs.ref_vllm_omni }}
       publish_release: ${{ inputs.publish_release }}

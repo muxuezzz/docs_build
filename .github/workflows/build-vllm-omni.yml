@@ -1,0 +1,151 @@
+name: 离线文档 · vLLM-Omni
+
+# vLLM-Omni 的 MkDocs 站点，构建方式基本照搬上游 .readthedocs.yml：
+#   1) 先装 CPU 版 torch（否则 pip install .[docs] 会拉 ~2GB CUDA 库）
+#   2) pip install .[docs]（mkdocs / mkdocstrings / 各插件，以及包本身）
+#   3) mkdocs build
+# 与上游的差别只在离线化补丁：关 Google Fonts、加 privacy/offline、
+# 内联 Slack 图标、把 MathJax 换成本地副本。
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 上游 git ref
+        type: string
+        default: main
+      site_url:
+        description: 站点根地址（写入 canonical 等元信息）
+        type: string
+        default: http://vllm-omni.internal/
+      publish_release:
+        description: 构建完成后发布到 GitHub Release
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        default: main
+      site_url:
+        type: string
+        default: http://vllm-omni.internal/
+      publish_release:
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: offline-vllm-omni-${{ inputs.ref }}
+  cancel-in-progress: true
+
+env:
+  PROJECT: vllm-omni
+  PYTHON_VERSION: '3.12'
+  # setup.py 里 detect_target_device() 看到这个变量就走 requirements/cpu.txt，
+  # 和 Read the Docs 上的行为一致：不装 CUDA 那套库
+  READTHEDOCS: '1'
+
+jobs:
+  build:
+    name: 构建 vLLM-Omni 站点
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - name: 检出构建仓库（补丁与脚本）
+        uses: actions/checkout@v4
+        with:
+          path: build-tools
+
+      - name: 检出上游源码
+        uses: actions/checkout@v4
+        with:
+          repository: vllm-project/vllm-omni
+          ref: ${{ inputs.ref }}
+          path: src
+          # git-revision-date-localized 需要每个文件的提交时间，浅克隆会全部缺失
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+
+      - name: 应用离线化补丁
+        run: bash build-tools/scripts/apply-patches.sh src build-tools/patches/${{ env.PROJECT }}
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: src/pyproject.toml
+
+      - name: 预装 CPU 版 torch
+        # 与上游 .readthedocs.yml 一致：只用 CPU wheel，避免 CUDA 库撑爆磁盘
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --only-binary=:all: \
+            --index-url https://download.pytorch.org/whl/cpu torch
+
+      - name: 安装文档依赖
+        run: python -m pip install .[docs]
+        working-directory: src
+
+      - name: 构建站点
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          bash build-tools/scripts/build-vllm-omni.sh \
+            src "out/${{ env.PROJECT }}" "${{ inputs.site_url }}"
+
+      - name: 离线体检
+        run: python build-tools/scripts/audit-offline.py "out/${{ env.PROJECT }}" | head -40
+
+      - name: 打包为 zip
+        run: |
+          mkdir -p dist
+          (cd "out/${{ env.PROJECT }}" && zip -qr "$GITHUB_WORKSPACE/dist/${{ env.PROJECT }}-offline.zip" .)
+          ls -lh dist/
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PROJECT }}-offline
+          path: dist/${{ env.PROJECT }}-offline.zip
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+      - name: 写入构建摘要
+        run: |
+          {
+            echo "### vLLM-Omni 离线文档"
+            echo ''
+            echo "- 上游 ref: \`${{ inputs.ref }}\`"
+            echo "- 产物: \`${{ env.PROJECT }}-offline.zip\` ($(du -h "dist/${{ env.PROJECT }}-offline.zip" | cut -f1))"
+            echo "- 已关闭 Google Fonts，启用 privacy/offline 插件，MathJax 走本地副本"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    name: 发布 Release
+    needs: [build]
+    if: inputs.publish_release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 汇总产物
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: 创建 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="vllm-omni-offline-$(date -u +%Y%m%d)-${{ github.run_number }}"
+          gh release create "$tag" dist/*.zip \
+            --title "vLLM-Omni 离线文档 $tag" \
+            --notes "手动触发的离线文档构建。上游 ref: \`${{ inputs.ref }}\`。触发人: @${{ github.actor }}"
+          echo "已发布: $tag" >> "$GITHUB_STEP_SUMMARY"

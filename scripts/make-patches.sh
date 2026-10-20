@@ -8,6 +8,8 @@
 #   <源码根目录>/vllm-ascend   —— vllm-project/vllm-ascend 的本地克隆
 #   <源码根目录>/recipes       —— vllm-project/recipes 的本地克隆
 #   <源码根目录>/ruff|uv|ty    —— astral-sh/ruff|uv|ty 的本地克隆
+#   <源码根目录>/vllm-omni     —— vllm-project/vllm-omni 的本地克隆
+#   <源码根目录>/litellm-docs  —— BerriAI/litellm-docs 的本地克隆
 #
 # Q-Peppa.github.io（Pi 文档）不需要补丁，因此不在列表里。
 # 只导出已跟踪文件的改动（git diff），未跟踪文件不会进补丁。
@@ -21,7 +23,7 @@ if [ ! -d "$src_root" ]; then
   exit 1
 fi
 
-for name in vllm-ascend recipes ruff uv ty; do
+for name in vllm-ascend recipes ruff uv ty vllm-omni litellm-docs; do
   repo="$src_root/$name"
   if [ ! -d "$repo/.git" ]; then
     echo "跳过（不是 git 仓库）: $repo" >&2
@@ -41,7 +43,22 @@ for name in vllm-ascend recipes ruff uv ty; do
     echo "提示: $repo 纳入 $(echo "$untracked" | wc -l) 个新增模板文件" >&2
   fi
 
-  git -C "$repo" diff --binary --no-color > "$target"
+  # 有些项目的构建钩子会就地重写文档源文件（vllm-omni 的 generate_examples /
+  # generate_api_readme / awesome-nav），这些是构建副产物，本地跑过一次构建就脏了，
+  # 不能写进补丁，否则会把构建机的临时结果带给 CI。
+  excludes=()
+  case "$name" in
+    vllm-omni)
+      excludes=(
+        ':(exclude)docs/user_guide/examples'
+        ':(exclude)docs/api'
+        ':(exclude)docs/generated'
+        ':(exclude)docs/.nav.yml'
+      )
+      ;;
+  esac
+
+  git -C "$repo" diff --binary --no-color -- . ${excludes[@]+"${excludes[@]}"} > "$target"
 
   if [ -s "$target" ]; then
     echo "已更新 $target ($(grep -c '^diff --git' "$target" || true) 个文件)"
