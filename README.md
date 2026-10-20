@@ -105,6 +105,21 @@ gh run watch
 | `ref` | 默认 `master` |
 | `publish_release` | 同上 |
 
+**LiteLLM**
+
+| 参数 | 说明 |
+| --- | --- |
+| `ref` | 默认 `main` |
+| `publish_release` | 同上 |
+
+**vLLM-Omni**
+
+| 参数 | 说明 |
+| --- | --- |
+| `ref` | 默认 `main` |
+| `site_url` | 写入 canonical / sitemap，通过 `OFFLINE_SITE_URL` 传给 mkdocs |
+| `publish_release` | 同上 |
+
 ## 产物
 
 | Artifact | 内容 | 体积参考 |
@@ -114,14 +129,16 @@ gh run watch
 | `recipes-next-offline` | Next.js 静态站点 zip | ~300 MB（解压 ~1.5 GB） |
 | `ruff-offline` / `uv-offline` / `ty-offline` | MkDocs 站点 zip | ~10–25 MB |
 | `pi-docs-offline` | rspress 静态站点 zip | ~20 MB |
+| `litellm-docs-offline` | Docusaurus 静态站点 zip | ~700 MB（解压 ~730 MB） |
+| `vllm-omni-offline` | MkDocs 站点 zip | 待测 |
 
 下载解压后：
 
 - **MkDocs 站点**（vllm-ascend / recipes-mkdocs / ruff / uv / ty）：`offline` 插件已把字体、
   图标内联进站点，直接双击 `index.html` 就能离线浏览，也可以整个目录拷到内网 Web 根目录。
-- **根路径静态站点**（recipes-next / pi-docs）：页面里是 `/_next/...`、`/static/...` 这类根路径资源，
-  **不能**用 `file://` 打开，需要一个静态服务器。本地验证：`cd 解压目录 && python -m http.server 8000`；
-  内网部署时放到站点根目录（不要再套一层子路径）。
+- **根路径静态站点**（recipes-next / pi-docs / litellm-docs）：页面里是 `/_next/...`、`/assets/...`
+  这类根路径资源，**不能**用 `file://` 打开，需要一个静态服务器。本地验证：
+  `cd 解压目录 && python -m http.server 8000`；内网部署时放到站点根目录（不要再套一层子路径）。
 
 都不需要在目标机器上装 Node/Python 运行时。
 
@@ -178,6 +195,24 @@ bash scripts/build-pi.sh /tmp/pi "$OUT/pi"
 
 Recipes 的两套站点同理，见 `scripts/build-recipes-*.sh` 顶部注释。
 
+## 验证产物是否真的离线
+
+两个脚本，一个静态扫、一个真浏览器跑：
+
+```bash
+# 1) 静态扫描：HTML/CSS 里还有哪些会发请求的外链
+python scripts/audit-offline.py out/litellm-docs
+# 退出码 0 = 没有 BLOCKING 外链
+
+# 2) 真浏览器：起本地服务 + 无头 Edge，拦掉所有非 127.0.0.1 请求，量首屏时间
+npm i puppeteer-core          # 只装驱动，不下载浏览器
+node scripts/check-site-offline.mjs out/litellm-docs --sample 6
+```
+
+`check-site-offline.mjs` 会用本机已装的 Edge/Chrome（`CHROME_PATH` 可指定），
+输出每页 FCP / DOMContentLoaded / load 与被拦截的外链条数——被拦截仍能正常渲染，
+说明断网打开不会卡。
+
 ## 已知注意点
 
 - **recipes 的 Next 构建依赖网络**：`pnpm build` 会执行 `fetch-provider-logos.mjs`
@@ -191,8 +226,19 @@ Recipes 的两套站点同理，见 `scripts/build-recipes-*.sh` 顶部注释。
 - **Astral 的 ruff / uv 需要 Rust**：`cargo dev generate-docs`（ruff）和
   `cargo dev generate-*-reference`（uv）要现场编译，首次 10–20 分钟，
   有 `Swatinem/rust-cache` 后重复构建会快很多。ty 的参考页已入库，不需要 Rust。
-- **`privacy` 插件在构建期仍要联网**：它把 markdown 里的外链图片、unpkg 上的 mermaid
-  下载到 `assets/external/`，产物本身不再请求外网。构建机上没网就会失败。
+- **`privacy` 插件在构建期仍要联网**：它把 markdown 里的外链图片下载到 `assets/external/`，
+  产物本身不再请求外网。构建机上没网就会失败。**注意它下载时没有超时**：vllm-omni 的
+  `mkdocs.yml` 因此没用 `privacy`，改由 `scripts/localize-external-assets.py` 在构建后处理
+  （并发、有超时、失败只降级），否则一个不可达的图片域名就能把构建挂死。
+- **LiteLLM 站点体积大、构建慢**：上游 2245 个页面、3358 张图要过一遍 optimize-images，
+  本地 31 分钟、产物体积 672 MB（其中 `assets/` 408 MB）。GitHub 托管 runner 会快一些，
+  但 Artifacts 下载也要等。要减小体积只能在 `patches/litellm-docs` 里删掉 social-cards 之类的产物。
+- **LiteLLM 正文里的图片走 CDN**：博主头像（`pbs.twimg.com`、`media.licdn.com`）、录屏截图
+  （`colony-recorder.s3.amazonaws.com`）都在 markdown 里写死。构建后由本地化脚本抓下来，
+  少数域名（LinkedIn、S3 私有桶）会 403 拒绝非浏览器请求，这些保留原 URL——断网时只是缺图。
+- **vllm-omni 的构建钩子会改写文档源文件**：`generate_examples.py` / `generate_api_readme.py` /
+  `awesome-nav` 会就地重写 `docs/user_guide/examples/`、`docs/api/`、`docs/.nav.yml`。
+  这些是构建副产物，`make-patches.sh` 已排除，别手动 `git add` 进去。
 - **Pi 文档仍带 Google Analytics**：`rspress.config.ts` 里的 `pluginGoogleAnalytics`
   会在页面里注入 GA 脚本。如果要“零外网请求”，删掉那个 plugin 和 `rsbuild-plugin-google-analytics`
   依赖即可（目前按你的要求保持原样，直接构建）。

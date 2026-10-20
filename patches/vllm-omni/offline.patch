@@ -106,7 +106,7 @@ index 320e44910..3fa7a6194 100644
  
        slackButton.addEventListener('click', () => {
 diff --git a/mkdocs.yml b/mkdocs.yml
-index c53712518..71996bb12 100644
+index c53712518..fab0802cd 100644
 --- a/mkdocs.yml
 +++ b/mkdocs.yml
 @@ -1,7 +1,7 @@
@@ -127,13 +127,14 @@ index c53712518..71996bb12 100644
    logo: source/logos/vllm-logo-only-light.ico
    favicon: source/logos/vllm-logo-only-light.ico
    palette:
-@@ -69,6 +71,10 @@ exclude_docs: |
+@@ -69,6 +71,11 @@ exclude_docs: |
  plugins:
    - meta
    - search
-+  # 离线构建：privacy 把外链图片/脚本下载到 assets/external，
-+  # offline 让站点在 file:// 下也能用搜索与导航缓存
-+  - privacy
++  # 离线构建：offline 让站点在 file:// 下也能用搜索与导航缓存。
++  # 没用 material 的 privacy 插件——它下载外链时没有超时，遇到不可达的域名
++  # 会无限期挂住整次构建。外链本地化改由构建脚本里的
++  # scripts/localize-external-assets.py 完成（并发、有超时、失败只降级不中断）。
 +  - offline
    - autorefs
    - awesome-nav

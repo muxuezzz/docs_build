@@ -71,8 +71,15 @@ cd "$src"
 echo "[build] mkdocs build (site_url=$site_url)"
 # mkdocs 没有 --site-url 选项，补丁把 mkdocs.yml 的 site_url 改成读 OFFLINE_SITE_URL
 export OFFLINE_SITE_URL="$site_url"
-# 不用 --strict：privacy 插件下载不到某个远端图片时只会 WARNING，
-# 加 strict 会让整站构建因为一张图失败。构建结束再单独检查外链（audit-offline.py）。
+# 不用 --strict：构建结束再单独检查外链（audit-offline.py）
 mkdocs build --site-dir "$out" 2>&1 | tail -40
+
+# 外链本地化：material 的 privacy 插件下载时没有超时，一个不可达的域名就能把
+# 整次构建挂死，所以改用这个脚本（并发下载、有超时、失败只降级）
+here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+py=${PYTHON:-python3}
+command -v "$py" >/dev/null 2>&1 || py=python
+echo "[build] 本地化外链资源"
+"$py" "$here/localize-external-assets.py" "$out" --prefix assets/external --jobs 8 || true
 
 echo "[build] 完成，文件数: $(find "$out" -type f | wc -l)，体积: $(du -sh "$out" | cut -f1)"
