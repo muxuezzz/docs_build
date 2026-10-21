@@ -130,7 +130,11 @@ gh run watch
 | `ruff-offline` / `uv-offline` / `ty-offline` | MkDocs 站点 zip | ~10–25 MB |
 | `pi-docs-offline` | rspress 静态站点 zip | ~20 MB |
 | `litellm-docs-offline` | Docusaurus 静态站点 zip | ~700 MB（解压 ~730 MB） |
-| `vllm-omni-offline` | MkDocs 站点 zip | 待测 |
+| `vllm-omni-offline` | MkDocs 站点 zip | ~200 MB（解压 207 MB，1855 页） |
+
+> `recipes-next` 解压后 1.5 GB，其中绝大部分是各模型厂商的 logo —— `pnpm build` 里的
+> `fetch-provider-logos.mjs` 会把它们下载到 `public/`（Qwen 220 MB、nvidia 203 MB…）。
+> 这是上游行为，线上站点也一样；嫌大只能改那个脚本。
 
 下载解压后：
 

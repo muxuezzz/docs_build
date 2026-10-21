@@ -13,3 +13,11 @@
 
 # WorkBuddy 本地记忆，不入库
 .workbuddy/
+
+# 本地构建/审计日志
+.build.log
+.*-build.log
+.*-audit.txt
+.*-audit.json
+.*-localize.json
+.verify/

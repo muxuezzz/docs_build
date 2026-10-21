@@ -9,6 +9,26 @@ index 6b26bcaa7..995b9cd94 100644
 +
 +# 离线构建：build-vllm-omni.sh 下载的 MathJax 运行时
 +/docs/mkdocs/javascript/vendor/
+diff --git a/docs/README.md b/docs/README.md
+index a81597d3c..4b4698174 100644
+--- a/docs/README.md
++++ b/docs/README.md
+@@ -17,10 +17,11 @@ Easy, fast, and cheap omni-modality model serving for everyone
+ </h3>
+ 
+ <p style="text-align:center">
+-<script async defer src="https://buttons.github.io/buttons.js"></script>
+-<a class="github-button" href="https://github.com/vllm-project/vllm-omni" data-show-count="true" data-size="large" aria-label="Star">Star</a>
+-<a class="github-button" href="https://github.com/vllm-project/vllm-omni/subscription" data-show-count="true" data-icon="octicon-eye" data-size="large" aria-label="Watch">Watch</a>
+-<a class="github-button" href="https://github.com/vllm-project/vllm-omni/fork" data-show-count="true" data-icon="octicon-repo-forked" data-size="large" aria-label="Fork">Fork</a>
++<!-- 离线构建：原先是 buttons.github.io 的 GitHub 按钮（Star/Watch/Fork 计数），
++     它会在运行时请求 api.github.com，断网时挂在 pending 上。改成普通链接。 -->
++<a href="https://github.com/vllm-project/vllm-omni">Star</a> ·
++<a href="https://github.com/vllm-project/vllm-omni/subscription">Watch</a> ·
++<a href="https://github.com/vllm-project/vllm-omni/fork">Fork</a>
+ </p>
+ 
+ ## About
 diff --git a/docs/mkdocs/javascript/mathjax.js b/docs/mkdocs/javascript/mathjax.js
 index 2238e32e4..6729a4429 100644
 --- a/docs/mkdocs/javascript/mathjax.js
