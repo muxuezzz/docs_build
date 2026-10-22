@@ -1,0 +1,383 @@
+[build] DOCS_LANG=zh SITE_DIR=/d/tmp/aaaupdate/docs-build/out/verify-ascend
+[rtd-build] Generating Chinese sources from .po files...
+Found 213 .po files
+  Generated: docs\source\zh\community\contributors.md
+  Generated: docs\source\zh\community\governance.md
+  Generated: docs\source\zh\community\index.md
+  Generated: docs\source\zh\community\issue-workflow-guidelines.md
+  Generated: docs\source\zh\community\slash-commands.md
+  Generated: docs\source\zh\community\user_stories\index.md
+  Generated: docs\source\zh\community\user_stories\llamafactory.md
+  Generated: docs\source\zh\community\versioning_policy.md
+  Generated: docs\source\zh\developer_guide\contribution\doc_writing.md
+  Generated: docs\source\zh\developer_guide\contribution\e2e_ci_test.md
+  Generated: docs\source\zh\developer_guide\contribution\index.md
+  Generated: docs\source\zh\developer_guide\contribution\multi_node_test.md
+  Generated: docs\source\zh\developer_guide\contribution\nightly_ci_test.md
+  Generated: docs\source\zh\developer_guide\contribution\testing.md
+  Generated: docs\source\zh\developer_guide\deepseek_v41_qli_candidate.md
+  Generated: docs\source\zh\developer_guide\Design_Documents\ACL_Graph.md
+  Generated: docs\source\zh\developer_guide\Design_Documents\add_custom_aclnn_op.md
+  Generated: docs\source\zh\developer_guide\Design_Documents\balance_schedule_refactor.md
+  Generated: docs\source\zh\developer_guide\Design_Documents\context_parallel.md
+  Generated: docs\source\zh\developer_guide\Design_Documents\cpu_binding.md
+  Generated: docs\source\zh\developer_guide\Design_Documents\disaggregated_prefill.md
+  Generated: docs\source\zh\developer_guide\Design_Documents\dynamic_chunked_pipeline_parallel.md
+  Generated: docs\source\zh\developer_guide\Design_Documents\index.md
+  Generated: docs\source\zh\developer_guide\Design_Documents\KV_Cache_Pool_Guide.md
+  Generated: docs\source\zh\developer_guide\Design_Documents\kvpp.md
+  Generated: docs\source\zh\developer_guide\Design_Documents\layerwise_and_sparse_kv_cache_offloading.md
+  Generated: docs\source\zh\developer_guide\Design_Documents\model_runner_v1_eplb.md
+  Generated: docs\source\zh\developer_guide\Design_Documents\model_runner_v2_eplb.md
+  Generated: docs\source\zh\developer_guide\Design_Documents\ModelRunner_prepare_inputs.md
+  Generated: docs\source\zh\developer_guide\Design_Documents\non_contiguous_kv_cache.md
+  Generated: docs\source\zh\developer_guide\Design_Documents\npugraph_ex.md
+  Generated: docs\source\zh\developer_guide\Design_Documents\patch.md
+  Generated: docs\source\zh\developer_guide\Design_Documents\persistent_csrc_build_cache.md
+  Generated: docs\source\zh\developer_guide\Design_Documents\quantization.md
+  Source not found: docs\source\developer_guide\Design_Documents\sfa_remote_d2h_connector.md
+  Generated: docs\source\zh\developer_guide\Design_Documents\speculative_kv_sliding_window.md
+  Source not found: docs\source\developer_guide\evaluation\accuracy_report\index.md
+  Generated: docs\source\zh\developer_guide\evaluation\index.md
+  Generated: docs\source\zh\developer_guide\evaluation\using_ais_bench.md
+  Generated: docs\source\zh\developer_guide\evaluation\using_evalscope.md
+  Generated: docs\source\zh\developer_guide\evaluation\using_lm_eval.md
+  Generated: docs\source\zh\developer_guide\evaluation\using_opencompass.md
+  Generated: docs\source\zh\developer_guide\index.md
+  Source not found: docs\source\developer_guide\modeling\adding_a_new_model.md
+  Source not found: docs\source\developer_guide\modeling\adding_a_new_multimodal_model.md
+  Source not found: docs\source\developer_guide\modeling\index.md
+  Generated: docs\source\zh\developer_guide\performance_and_debug\index.md
+  Generated: docs\source\zh\developer_guide\performance_and_debug\msprobe_guide.md
+  Generated: docs\source\zh\developer_guide\performance_and_debug\optimization_and_tuning.md
+  Generated: docs\source\zh\developer_guide\performance_and_debug\performance_benchmark.md
+  Source not found: docs\source\developer_guide\performance_and_debug\profile_execute_duration.md
+  Generated: docs\source\zh\developer_guide\performance_and_debug\service_profiling_guide.md
+  Generated: docs\source\zh\faqs.md
+  Generated: docs\source\zh\getting_started\installation\base_environment.inc.md
+  Generated: docs\source\zh\getting_started\installation\cann_image\atlas-200i-pro.inc.md
+  Generated: docs\source\zh\getting_started\installation\cann_image\atlas-300i-duo.inc.md
+  Generated: docs\source\zh\getting_started\installation\cann_image\atlas-950dt.inc.md
+  Generated: docs\source\zh\getting_started\installation\cann_image\atlas-a2.inc.md
+  Generated: docs\source\zh\getting_started\installation\cann_image\atlas-a3.inc.md
+  Generated: docs\source\zh\getting_started\installation\existing_cann_environment.inc.md
+  Generated: docs\source\zh\getting_started\installation\install_vllm_ascend.inc.md
+  Generated: docs\source\zh\getting_started\installation\prebuilt_image.inc.md
+  Generated: docs\source\zh\getting_started\installation\supported_hardware.inc.md
+  Generated: docs\source\zh\getting_started\installation.md
+  Generated: docs\source\zh\getting_started\overview.md
+  Generated: docs\source\zh\getting_started\quick_start\ascend_image\atlas-200i-pro.inc.md
+  Generated: docs\source\zh\getting_started\quick_start\ascend_image\atlas-300i-duo.inc.md
+  Generated: docs\source\zh\getting_started\quick_start\ascend_image\atlas-950dt.inc.md
+  Generated: docs\source\zh\getting_started\quick_start\ascend_image\atlas-a2.inc.md
+  Generated: docs\source\zh\getting_started\quick_start\ascend_image\atlas-a3.inc.md
+  Generated: docs\source\zh\getting_started\quick_start\ascend_image\image_download_mirror.inc.md
+  Generated: docs\source\zh\getting_started\quick_start\ascend_image\verify_container.inc.md
+  Generated: docs\source\zh\getting_started\quick_start\offline\qwen3-0.6b-310p.inc.md
+  Generated: docs\source\zh\getting_started\quick_start\offline\qwen3-0.6b.inc.md
+  Generated: docs\source\zh\getting_started\quick_start\online\qwen3-0.6b-310p.inc.md
+  Generated: docs\source\zh\getting_started\quick_start\online\qwen3-0.6b.inc.md
+  Generated: docs\source\zh\getting_started\quick_start.md
+  Source not found: docs\source\getting_started.md
+  Generated: docs\source\zh\index.md
+  Source not found: docs\source\installation.md
+  Source not found: docs\source\quick_start.md
+  Generated: docs\source\zh\tutorials\features\dynamic_chunked_pipeline_parallel.md
+  Generated: docs\source\zh\tutorials\features\index.md
+  Source not found: docs\source\tutorials\features\long_sequence_context_parallel_multi_node.md
+  Source not found: docs\source\tutorials\features\long_sequence_context_parallel_single_node.md
+  Generated: docs\source\zh\tutorials\features\pd_colocated_mooncake_multi_instance.md
+  Generated: docs\source\zh\tutorials\features\pd_disaggregation_mooncake_multi_node.md
+  Generated: docs\source\zh\tutorials\features\pd_disaggregation_mooncake_single_node.md
+  Generated: docs\source\zh\tutorials\features\ray.md
+  Generated: docs\source\zh\tutorials\features\suffix_speculative_decoding.md
+  Source not found: docs\source\tutorials\hardwares\310p.md
+  Source not found: docs\source\tutorials\hardwares\index.md
+  Generated: docs\source\zh\tutorials\models\Cohere-Transcribe.md
+  Generated: docs\source\zh\tutorials\models\DeepSeek-R1.md
+  Generated: docs\source\zh\tutorials\models\DeepSeek-V3.1.md
+  Generated: docs\source\zh\tutorials\models\DeepSeek-V3.2.md
+  Generated: docs\source\zh\tutorials\models\DeepSeek-V4-Flash-Vision.md
+  Generated: docs\source\zh\tutorials\models\DeepSeek-V4-Flash.md
+  Generated: docs\source\zh\tutorials\models\DeepSeek-V4-Pro.md
+  Generated: docs\source\zh\tutorials\models\DeepSeek-V4.1-Flash.md
+  Generated: docs\source\zh\tutorials\models\DeepSeekOCR2.md
+  Generated: docs\source\zh\tutorials\models\Dots3-Note.md
+  Generated: docs\source\zh\tutorials\models\Gemma4.md
+  Generated: docs\source\zh\tutorials\models\GLM4.x.md
+  Generated: docs\source\zh\tutorials\models\GLM5.2.md
+  Generated: docs\source\zh\tutorials\models\GLM5.3-Flash.md
+  Generated: docs\source\zh\tutorials\models\GLM5.3.md
+  Generated: docs\source\zh\tutorials\models\GLM5.md
+  Generated: docs\source\zh\tutorials\models\gpt-oss-120b.md
+  Generated: docs\source\zh\tutorials\models\Hunyuan-A13B-Instruct.md
+  Generated: docs\source\zh\tutorials\models\Hy3-preview.md
+  Generated: docs\source\zh\tutorials\models\Hy4-preview.md
+  Generated: docs\source\zh\tutorials\models\index.md
+  Generated: docs\source\zh\tutorials\models\InternVL3.5.md
+  Generated: docs\source\zh\tutorials\models\Kimi-K2-Thinking.md
+  Generated: docs\source\zh\tutorials\models\Kimi-K2.5.md
+  Generated: docs\source\zh\tutorials\models\Kimi-K2.6.md
+  Generated: docs\source\zh\tutorials\models\Kimi-K3.md
+  Generated: docs\source\zh\tutorials\models\LLaVA-OneVision-Qwen2-0.5B-OV.md
+  Source not found: docs\source\tutorials\models\MiniMax-M2.5.md
+  Generated: docs\source\zh\tutorials\models\MiniMax-M2.md
+  Generated: docs\source\zh\tutorials\models\MiniMax-M3.md
+  Generated: docs\source\zh\tutorials\models\Minitron-8B-Base.md
+  Generated: docs\source\zh\tutorials\models\Mixtral-8x7B-Instruct-v0.1.md
+  Generated: docs\source\zh\tutorials\models\PaddleOCR-VL.md
+  Generated: docs\source\zh\tutorials\models\Qwen-VL-Dense.md
+  Source not found: docs\source\tutorials\models\Qwen2.5-7B.md
+  Generated: docs\source\zh\tutorials\models\Qwen2.5-Math-RM-72B.md
+  Source not found: docs\source\tutorials\models\Qwen2.5-Omni.md
+  Generated: docs\source\zh\tutorials\models\Qwen3-235B-A22B.md
+  Generated: docs\source\zh\tutorials\models\Qwen3-30B-A3B.md
+  Source not found: docs\source\tutorials\models\Qwen3-32B-W4A4.md
+  Source not found: docs\source\tutorials\models\Qwen3-8B-W4A8.md
+  Generated: docs\source\zh\tutorials\models\Qwen3-ASR-1.7B.md
+  Generated: docs\source\zh\tutorials\models\Qwen3-Coder-30B-A3B.md
+  Generated: docs\source\zh\tutorials\models\Qwen3-Dense.md
+  Generated: docs\source\zh\tutorials\models\Qwen3-Embedding.md
+  Generated: docs\source\zh\tutorials\models\Qwen3-Next.md
+  Generated: docs\source\zh\tutorials\models\Qwen3-Omni-30B-A3B-Thinking.md
+  Generated: docs\source\zh\tutorials\models\Qwen3-Reranker.md
+  Generated: docs\source\zh\tutorials\models\Qwen3-VL-235B-A22B-Instruct.md
+  Generated: docs\source\zh\tutorials\models\Qwen3-VL-30B-A3B-Instruct.md
+  Generated: docs\source\zh\tutorials\models\Qwen3-VL-Embedding.md
+  Generated: docs\source\zh\tutorials\models\Qwen3-VL-Reranker.md
+  Generated: docs\source\zh\tutorials\models\Qwen3.5-27B-Qwen3.6-27B.md
+  Source not found: docs\source\tutorials\models\Qwen3.5-27B.md
+  Generated: docs\source\zh\tutorials\models\Qwen3.5-397B-A17B.md
+  Generated: docs\source\zh\tutorials\models\Qwen3.5-Dense.md
+  Generated: docs\source\zh\tutorials\models\Qwen3.6-35B-A3B.md
+  Generated: docs\source\zh\tutorials\models\Qwen3.8-2.4T-A95B.md
+  Generated: docs\source\zh\tutorials\models\Qwen3.8-27B.md
+  Generated: docs\source\zh\tutorials\models\Qwen3.8-Flash-Next.md
+  Source not found: docs\source\tutorials\models\Qwen3_embedding.md
+  Source not found: docs\source\tutorials\models\Qwen3_reranker.md
+  Generated: docs\source\zh\tutorials\models\SigLIP2.md
+  Generated: docs\source\zh\tutorials\models\Step-5-Preview.md
+  Generated: docs\source\zh\user_guide\configuration\additional_config.md
+  Generated: docs\source\zh\user_guide\configuration\encoder_cache_manager.md
+  Generated: docs\source\zh\user_guide\configuration\env_vars.md
+  Generated: docs\source\zh\user_guide\configuration\index.md
+  Generated: docs\source\zh\user_guide\configuration\runtime_config.md
+  Generated: docs\source\zh\user_guide\deployment_guide\index.md
+  Generated: docs\source\zh\user_guide\deployment_guide\using_mindie_motor.md
+  Generated: docs\source\zh\user_guide\deployment_guide\using_volcano_kthena.md
+  Generated: docs\source\zh\user_guide\feature_guide\Ai_QoS_introduction_en.md
+  Generated: docs\source\zh\user_guide\feature_guide\batch_invariance.md
+  Generated: docs\source\zh\user_guide\feature_guide\batch_job_aware_scheduler.md
+  Generated: docs\source\zh\user_guide\feature_guide\context_parallel.md
+  Generated: docs\source\zh\user_guide\feature_guide\cpu_binding.md
+  Generated: docs\source\zh\user_guide\feature_guide\dynamic_chunk_pipeline_parallel.md
+  Generated: docs\source\zh\user_guide\feature_guide\dyntra_lb.md
+  Generated: docs\source\zh\user_guide\feature_guide\encoder_cache_cpu_offload.md
+  Generated: docs\source\zh\user_guide\feature_guide\epd_disaggregation.md
+  Source not found: docs\source\user_guide\feature_guide\eplb_swift_balancer.md
+  Generated: docs\source\zh\user_guide\feature_guide\expert_parallelism_load_balancer.md
+  Generated: docs\source\zh\user_guide\feature_guide\Fine_grained_TP.md
+  Generated: docs\source\zh\user_guide\feature_guide\flash_attention.md
+  Generated: docs\source\zh\user_guide\feature_guide\graph_mode.md
+  Generated: docs\source\zh\user_guide\feature_guide\index.md
+  Generated: docs\source\zh\user_guide\feature_guide\kv_cache_cpu_offload.md
+  Generated: docs\source\zh\user_guide\feature_guide\kv_cache_pool_ascend_store.md
+  Source not found: docs\source\user_guide\feature_guide\kv_pool.md
+  Generated: docs\source\zh\user_guide\feature_guide\kvpp.md
+  Generated: docs\source\zh\user_guide\feature_guide\large_scale_ep.md
+  Generated: docs\source\zh\user_guide\feature_guide\layerwise_and_sparse_kv_cache_offloading.md
+  Source not found: docs\source\user_guide\feature_guide\layerwise_kv_pool.md
+  Source not found: docs\source\user_guide\feature_guide\layerwise_prefill_kv_offload.md
+  Generated: docs\source\zh\user_guide\feature_guide\lmcache_ascend_deployment.md
+  Generated: docs\source\zh\user_guide\feature_guide\lora.md
+  Generated: docs\source\zh\user_guide\feature_guide\mooncake_hybrid_attention.md
+  Generated: docs\source\zh\user_guide\feature_guide\mooncake_layerwise_adaptation_and_optimization.md
+  Source not found: docs\source\user_guide\feature_guide\Multi_Token_Prediction.md
+  Generated: docs\source\zh\user_guide\feature_guide\netloader.md
+  Generated: docs\source\zh\user_guide\feature_guide\pipeline_parallel.md
+  Generated: docs\source\zh\user_guide\feature_guide\preempt_offload_connector.md
+  Generated: docs\source\zh\user_guide\feature_guide\quantization.md
+  Generated: docs\source\zh\user_guide\feature_guide\rfork.md
+  Generated: docs\source\zh\user_guide\feature_guide\rl.md
+  Generated: docs\source\zh\user_guide\feature_guide\runtime_guard.md
+  Generated: docs\source\zh\user_guide\feature_guide\sequence_parallelism.md
+  Generated: docs\source\zh\user_guide\feature_guide\short_request_first.md
+  Generated: docs\source\zh\user_guide\feature_guide\sleep_mode.md
+  Source not found: docs\source\user_guide\feature_guide\sparse_kv_cache_offload.md
+  Generated: docs\source\zh\user_guide\feature_guide\speculative_decoding.md
+  Generated: docs\source\zh\user_guide\feature_guide\structured_output.md
+  Generated: docs\source\zh\user_guide\feature_guide\ucm_deployment.md
+  Generated: docs\source\zh\user_guide\index.md
+  Generated: docs\source\zh\user_guide\ms_service_metric.md
+  Generated: docs\source\zh\user_guide\release_notes.md
+  Generated: docs\source\zh\user_guide\support_matrix\feature_matrix.md
+  Generated: docs\source\zh\user_guide\support_matrix\index.md
+  Generated: docs\source\zh\user_guide\support_matrix\supported_features.md
+  Generated: docs\source\zh\user_guide\support_matrix\supported_models.md
+  Copied (no .po): docs\source\zh\_templates\feature_template.md
+  Copied (no .po): docs\source\zh\_templates\feature_template_zh.md
+  Copied (no .po): docs\source\zh\_templates\Model-Deployment-Tutorial-Template.md
+  Copied (no .po): docs\source\zh\_templates\Model-Deployment-Tutorial-Template.zh.md
+  Copied (no .po): docs\source\zh\_templates\template-supplement.md
+  Copied (no .po): docs\source\zh\_templates\template-supplement.zh.md
+
+Generated 186 Chinese files in docs\source\zh
+Done!
+[rtd-build] Mirroring shared static assets into docs/source/zh/...
+[rtd-build] Building docs (DOCS_LANG=zh, DOCS_IS_RELEASE=false, site_dir=/d/tmp/aaaupdate/docs-build/out/verify-ascend)...
+
+ │  ⚠  Warning from the Material for MkDocs team
+ │
+ │  MkDocs 2.0, the underlying framework of Material for MkDocs,
+ │  will introduce backward-incompatible changes, including:
+ │
+ │  × All plugins will stop working – the plugin system has been removed
+ │  × All theme overrides will break – the theming system has been rewritten
+ │  × No migration path exists – existing projects cannot be upgraded
+ │  × Closed contribution model – community members can't report bugs
+ │  × Currently unlicensed – unsuitable for production use
+ │
+ │  Our full analysis:
+ │
+ │  https://squidfunk.github.io/mkdocs-material/blog/2026/02/18/mkdocs-2.0/
+
+INFO    -  [macros] - Found local Python module 'docs/hooks/macros_main' in: D:\tmp\aaaupdate\docs\vllm-ascend
+INFO    -  [macros] - Found external Python module 'docs/hooks/macros_main' in: D:\tmp\aaaupdate\docs\vllm-ascend
+INFO    -  [macros] - Functions found: define_env,on_pre_page_macros,on_post_page_macros,on_post_build
+INFO    -  [macros] - Includes directory: docs/source/zh
+INFO    -  [macros] - Config variables: ['extra', 'config', 'environment', 'plugin', 'git', 'is_release', 'rtd_version', 'docs_lang', 'vllm_version', 'vllm_ascend_version', 'stable_vllm_ascend_version', 'release_vllm_ascend_version', 'release_vllm_version', 'release_python_version', 'release_image_python_version', 'release_hdk_version', 'release_cann_version', 'release_pytorch_version', 'release_torch_npu_version', 'release_nnal_version', 'release_triton_ascend_version', 'cann_image_tag', 'main_python_version', 'main_cann_version', 'main_pytorch_version', 'main_torch_npu_version', 'main_torchvision_version', 'main_torchaudio_version', 'main_triton_ascend_version', 'social', 'generator', 'main_vllm_commit', 'main_vllm_tag', 'macros', 'filters', 'filters_builtin']
+INFO    -  [macros] - Config macros: ['context', 'macros_info', 'now', 'fix_url', 'include_code']
+INFO    -  [macros] - Config filters: ['pretty', 'relative_url']
+[model-code] Artifacts generated
+INFO    -  Cleaning site directory
+INFO    -  Building documentation to directory: D:\tmp\aaaupdate\docs-build\out\verify-ascend
+INFO    -  The following pages exist in the docs directory, but are not included in the "nav" configuration:
+  - developer_guide\deepseek_v41_qli_candidate.md
+  - developer_guide\Design_Documents\speculative_kv_sliding_window.md
+  - tutorials\models\Step-5-Preview.md
+  - user_guide\ms_service_metric.md
+  - user_guide\configuration\runtime_config.md
+  - user_guide\feature_guide\dyntra_lb.md
+  - user_guide\feature_guide\encoder_cache_cpu_offload.md
+  - user_guide\feature_guide\kv_cache_pool_ascend_store.md
+  - user_guide\feature_guide\runtime_guard.md
+WARNING -  A reference to 'user_guide/feature_guide/kv_pool.md' is included in the 'nav' configuration, which is not found in the documentation files.
+INFO    -  Doc file 'community/slash-commands.md' contains a link '#permission', but there is no such anchor on this page.
+INFO    -  Doc file 'community/slash-commands.md' contains a link '../developer_guide/contribution/testing.md#run-doctest', but the doc 'developer_guide/contribution/testing.md' does not contain an anchor '#run-doctest'.
+INFO    -  Doc file 'community/slash-commands.md' contains a link '../developer_guide/contribution/testing.md#ci-workflow-triggers-and-the-schedule_-prefix', but the doc 'developer_guide/contribution/testing.md' does not contain an anchor '#ci-workflow-triggers-and-the-schedule_-prefix'.
+INFO    -  Doc file 'developer_guide/Design_Documents/KV_Cache_Pool_Guide.md' contains a link '#how-is-mooncakestoreconnectorv1-implemented', but there is no such anchor on this page.
+INFO    -  Doc file 'developer_guide/Design_Documents/add_custom_aclnn_op.md' contains a link 'persistent_csrc_build_cache.md#cmake-integration-contract', but the doc 'developer_guide/Design_Documents/persistent_csrc_build_cache.md' does not contain an anchor '#cmake-integration-contract'.
+INFO    -  Doc file 'developer_guide/Design_Documents/balance_schedule_refactor.md' contains a link '#behavior-preservation-contract', but there is no such anchor on this page.
+INFO    -  Doc file 'developer_guide/Design_Documents/balance_schedule_refactor.md' contains a link '#step-1--hook-gather-onto-_has_global_unfinished_reqs-and-delete-the-enginecore-copies', but there is no such anchor on this page.
+INFO    -  Doc file 'developer_guide/Design_Documents/context_parallel.md' contains a link '../../user_guide/feature_guide/context_parallel.md#prefill-context-parallel', but the doc 'user_guide/feature_guide/context_parallel.md' does not contain an anchor '#prefill-context-parallel'.
+INFO    -  Doc file 'developer_guide/Design_Documents/context_parallel.md' contains a link '../../user_guide/feature_guide/context_parallel.md#usage', but the doc 'user_guide/feature_guide/context_parallel.md' does not contain an anchor '#usage'.
+INFO    -  Doc file 'developer_guide/contribution/index.md' contains a link '../Design_Documents/persistent_csrc_build_cache.md#cmake-integration-contract', but the doc 'developer_guide/Design_Documents/persistent_csrc_build_cache.md' does not contain an anchor '#cmake-integration-contract'.
+INFO    -  Doc file 'developer_guide/contribution/nightly_ci_test.md' contains a link './testing.md#ci-workflow-triggers-and-the-schedule_-prefix', but the doc 'developer_guide/contribution/testing.md' does not contain an anchor '#ci-workflow-triggers-and-the-schedule_-prefix'.
+INFO    -  Doc file 'developer_guide/contribution/nightly_ci_test.md' contains a link '../performance_and_debug/service_profiling_guide.md#5-view-results', but the doc 'developer_guide/performance_and_debug/service_profiling_guide.md' does not contain an anchor '#5-view-results'.
+INFO    -  Doc file 'developer_guide/contribution/nightly_ci_test.md' contains a link '../performance_and_debug/service_profiling_guide.md#4-analyze-data', but the doc 'developer_guide/performance_and_debug/service_profiling_guide.md' does not contain an anchor '#4-analyze-data'.
+INFO    -  Doc file 'developer_guide/performance_and_debug/msprobe_guide.md' contains a link '#dumpjson-file-description', but there is no such anchor on this page.
+INFO    -  Doc file 'developer_guide/performance_and_debug/optimization_and_tuning.md' contains a link '#2configure-your-environment', but there is no such anchor on this page.
+INFO    -  Doc file 'developer_guide/performance_and_debug/service_profiling_guide.md' contains a link '#ascend-pytorch-profiler', but there is no such anchor on this page.
+INFO    -  Doc file 'getting_started/installation.md' contains a link '../community/versioning_policy.md#release-compatibility-matrix', but the doc 'community/versioning_policy.md' does not contain an anchor '#release-compatibility-matrix'.
+INFO    -  Doc file 'tutorials/features/dynamic_chunked_pipeline_parallel.md' contains a link 'pd_disaggregation_mooncake_multi_node.md#install-mooncake', but the doc 'tutorials/features/pd_disaggregation_mooncake_multi_node.md' does not contain an anchor '#install-mooncake'.
+INFO    -  Doc file 'tutorials/features/dynamic_chunked_pipeline_parallel.md' contains a link 'pd_disaggregation_mooncake_multi_node.md#run_dp_template-sh', but the doc 'tutorials/features/pd_disaggregation_mooncake_multi_node.md' does not contain an anchor '#run_dp_template-sh'.
+INFO    -  Doc file 'tutorials/features/dynamic_chunked_pipeline_parallel.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/features/pd_disaggregation_mooncake_multi_node.md' contains a link '#atlas-850850e950-superpod-communication-configuration', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/features/pd_disaggregation_mooncake_multi_node.md' contains a link '#start-the-service', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/features/pd_disaggregation_mooncake_single_node.md' contains a link 'pd_disaggregation_mooncake_multi_node.md#qos-configuration', but the doc 'tutorials/features/pd_disaggregation_mooncake_multi_node.md' does not contain an anchor '#qos-configuration'.
+INFO    -  Doc file 'tutorials/models/DeepSeek-V4-Flash-Vision.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/DeepSeek-V4-Flash.md' contains a link '#q-how-do-the-w4a4c8-ultra-low-bit-quantized-weights-preserve-accuracy', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/DeepSeek-V4-Flash.md' contains a link '#7-accuracy-evaluation', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/DeepSeek-V4-Flash.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/DeepSeek-V4-Pro.md' contains a link '#q-how-do-the-w4a4c8-ultra-low-bit-quantized-weights-preserve-accuracy', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/DeepSeek-V4-Pro.md' contains a link '#5-online-service-deployment', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/DeepSeek-V4-Pro.md' contains a link '#7-accuracy-evaluation', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/DeepSeek-V4-Pro.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/DeepSeek-V4.1-Flash.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/DeepSeekOCR2.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/Dots3-Note.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/GLM5.2.md' contains a link '#q-how-do-the-w4a4c8-ultra-low-bit-quantized-weights-preserve-accuracy', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/GLM5.2.md' contains a link '#513-prefill-decode-disaggregation', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/GLM5.2.md' contains a link '#521-single-node-1m-deployment', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/GLM5.2.md' contains a link '#5-deployment', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/GLM5.2.md' contains a link '#7-accuracy-evaluation', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/GLM5.2.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/GLM5.3-Flash.md' contains a link '../../user_guide/feature_guide/kv_cache_pool_ascend_store.md#scenario-2-memcache-backend', but the doc 'user_guide/feature_guide/kv_cache_pool_ascend_store.md' does not contain an anchor '#scenario-2-memcache-backend'.
+INFO    -  Doc file 'tutorials/models/GLM5.3-Flash.md' contains a link '../../user_guide/feature_guide/kv_cache_pool_ascend_store.md#hdk-and-cann-version-compatibility-reference', but the doc 'user_guide/feature_guide/kv_cache_pool_ascend_store.md' does not contain an anchor '#hdk-and-cann-version-compatibility-reference'.
+INFO    -  Doc file 'tutorials/models/GLM5.3-Flash.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/GLM5.3.md' contains a link '#41-docker-image-installation', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/GLM5.3.md' contains a link '#9-performance-tuning', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/GLM5.3.md' contains a link '../../user_guide/feature_guide/kv_cache_pool_ascend_store.md#scenario-2-memcache-backend', but the doc 'user_guide/feature_guide/kv_cache_pool_ascend_store.md' does not contain an anchor '#scenario-2-memcache-backend'.
+INFO    -  Doc file 'tutorials/models/GLM5.3.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/GLM5.md' contains a link '#51-single-node-online-deployment', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/GLM5.md' contains a link '#92-tuning-guidelines', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/GLM5.md' contains a link '#52-multi-node-deployment', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/GLM5.md' contains a link '#532-prefill-decode-disaggregation-a3-series', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/GLM5.md' contains a link '#531-prefill-decode-disaggregation-950dt-products', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/GLM5.md' contains a link '#5-在线服务部署', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/GLM5.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/Gemma4.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/Hy4-preview.md' contains a link '#2-supported-features', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Hy4-preview.md' contains a link '#9-declaration', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Hy4-preview.md' contains a link '#5-online-service-deployment', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Hy4-preview.md' contains a link '#41-docker-image-installation', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Hy4-preview.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/InternVL3.5.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/Kimi-K2.6.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/Kimi-K3.md' contains a link '#52-eight-node-pd-separation-deployment', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Kimi-K3.md' contains a link '../features/pd_disaggregation_mooncake_multi_node.md#start-the-service', but the doc 'tutorials/features/pd_disaggregation_mooncake_multi_node.md' does not contain an anchor '#start-the-service'.
+INFO    -  Doc file 'tutorials/models/Kimi-K3.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/MiniMax-M3.md' contains a link '#10-faq', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/MiniMax-M3.md' contains a link '#92-tuning-guidelines', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/MiniMax-M3.md' contains a link '../../user_guide/feature_guide/kv_cache_pool_ascend_store.md#mooncake-ssd-offload-parameter-tuning', but the doc 'user_guide/feature_guide/kv_cache_pool_ascend_store.md' does not contain an anchor '#mooncake-ssd-offload-parameter-tuning'.
+INFO    -  Doc file 'tutorials/models/Mixtral-8x7B-Instruct-v0.1.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/PaddleOCR-VL.md' contains a link '#51-single-node-online-deployment', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Qwen3-30B-A3B.md' contains a link '#6-功能验证', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Qwen3-30B-A3B.md' contains a link '#51-single-node-online-deployment', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Qwen3-30B-A3B.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#执行性能评估', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#执行性能评估'.
+INFO    -  Doc file 'tutorials/models/Qwen3-Coder-30B-A3B.md' contains a link '#6-功能验证', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Qwen3-Coder-30B-A3B.md' contains a link '#51-single-node-online-deployment', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Qwen3-Coder-30B-A3B.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#执行性能评估', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#执行性能评估'.
+INFO    -  Doc file 'tutorials/models/Qwen3-Dense.md' contains a link '#51-single-node-online-deployment', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Qwen3-Dense.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/Qwen3-Next.md' contains a link '#5-在线服务部署', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Qwen3-Next.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/Qwen3-VL-30B-A3B-Instruct.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/Qwen3.5-27B-Qwen3.6-27B.md' contains a link '#6-功能验证', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Qwen3.5-27B-Qwen3.6-27B.md' contains a link '#92-tuning-guidelines', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Qwen3.5-27B-Qwen3.6-27B.md' contains a link '#5-在线服务部署', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Qwen3.5-27B-Qwen3.6-27B.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/Qwen3.5-397B-A17B.md' contains a link '#52-multi-node-deployment-with-mp-recommended', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Qwen3.5-397B-A17B.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/Qwen3.5-Dense.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/Qwen3.6-35B-A3B.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/Qwen3.8-2.4T-A95B.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/Qwen3.8-27B.md' contains a link '#92-tuning-guidelines', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Qwen3.8-27B.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/Qwen3.8-Flash-Next.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/SigLIP2.md' contains a link '#51-single-node-online-deployment', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/SigLIP2.md' contains a link '#81-http-serving-benchmark', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Step-5-Preview.md' contains a link '#2-supported-features', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Step-5-Preview.md' contains a link '#9-declaration', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Step-5-Preview.md' contains a link '#41-docker-image-installation', but there is no such anchor on this page.
+INFO    -  Doc file 'tutorials/models/Step-5-Preview.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'tutorials/models/gpt-oss-120b.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'user_guide/configuration/additional_config.md' contains a link '../feature_guide/context_parallel.md#prefill-context-parallel', but the doc 'user_guide/feature_guide/context_parallel.md' does not contain an anchor '#prefill-context-parallel'.
+INFO    -  Doc file 'user_guide/configuration/additional_config.md' contains a link '../feature_guide/expert_parallelism_load_balancer.md#advanced-stair-tuning', but the doc 'user_guide/feature_guide/expert_parallelism_load_balancer.md' does not contain an anchor '#advanced-stair-tuning'.
+INFO    -  Doc file 'user_guide/feature_guide/Fine_grained_TP.md' contains a link '#experimental-results', but there is no such anchor on this page.
+INFO    -  Doc file 'user_guide/feature_guide/Fine_grained_TP.md' contains a link '#preconditions-for-o_proj--mlp-tp', but there is no such anchor on this page.
+INFO    -  Doc file 'user_guide/feature_guide/Fine_grained_TP.md' contains a link '#models', but there is no such anchor on this page.
+INFO    -  Doc file 'user_guide/feature_guide/Fine_grained_TP.md' contains a link '#standard-tensor-parallelism-requirement', but there is no such anchor on this page.
+INFO    -  Doc file 'user_guide/feature_guide/batch_invariance.md' contains a link '../../faqs.md#22-why-does-tpot-increase-drastically-as-concurrency-grows', but the doc 'faqs.md' does not contain an anchor '#22-why-does-tpot-increase-drastically-as-concurrency-grows'.
+INFO    -  Doc file 'user_guide/feature_guide/context_parallel.md' contains a link '#combining-pcp-and-dcp', but there is no such anchor on this page.
+INFO    -  Doc file 'user_guide/feature_guide/dynamic_chunk_pipeline_parallel.md' contains a link '../../developer_guide/evaluation/using_ais_bench.md#execute-performance-evaluation', but the doc 'developer_guide/evaluation/using_ais_bench.md' does not contain an anchor '#execute-performance-evaluation'.
+INFO    -  Doc file 'user_guide/feature_guide/graph_mode.md' contains a link '../configuration/additional_config.md#configuration-options', but the doc 'user_guide/configuration/additional_config.md' does not contain an anchor '#configuration-options'.
+INFO    -  Doc file 'user_guide/feature_guide/kv_cache_pool_ascend_store.md' contains a link '#hdk-and-cann-version-compatibility-reference', but there is no such anchor on this page.
+INFO    -  Doc file 'user_guide/feature_guide/kv_cache_pool_ascend_store.md' contains a link '#kv-transfer-config-common-parameters', but there is no such anchor on this page.
+INFO    -  Doc file 'user_guide/feature_guide/kv_cache_pool_ascend_store.md' contains a link '#scenario-1-mooncake-backend', but there is no such anchor on this page.
+INFO    -  Doc file 'user_guide/feature_guide/kv_cache_pool_ascend_store.md' contains a link '#scenario-2-memcache-backend', but there is no such anchor on this page.
+INFO    -  Doc file 'user_guide/feature_guide/mooncake_hybrid_attention.md' contains a link 'mooncake_layerwise_adaptation_and_optimization.md#51-mooncake-version', but the doc 'user_guide/feature_guide/mooncake_layerwise_adaptation_and_optimization.md' does not contain an anchor '#51-mooncake-version'.
+INFO    -  Doc file 'user_guide/feature_guide/pipeline_parallel.md' contains a link '#pp-with-speculative-decoding', but there is no such anchor on this page.
+INFO    -  Doc file 'user_guide/support_matrix/feature_matrix.md' contains a link '../feature_guide/context_parallel.md#prefill-context-parallel', but the doc 'user_guide/feature_guide/context_parallel.md' does not contain an anchor '#prefill-context-parallel'.
+INFO    -  Documentation built in 23.72 seconds
+[build] 完成，文件数: 260，体积: 47M

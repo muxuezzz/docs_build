@@ -119,7 +119,7 @@ index 094553cd7..50c3954ac 100644
          - user_guide/feature_guide/large_scale_ep.md
          - user_guide/feature_guide/ucm_deployment.md
 diff --git a/tools/rtd_build.sh b/tools/rtd_build.sh
-index 25a4507ff..ba175e696 100755
+index 25a4507ff..3a0e0b6b8 100755
 --- a/tools/rtd_build.sh
 +++ b/tools/rtd_build.sh
 @@ -44,7 +44,7 @@ if [ "$DOCS_LANG" = "zh" ]; then
@@ -131,3 +131,15 @@ index 25a4507ff..ba175e696 100755
      export DOCS_THEME_LANG=zh
      export DOCS_PALETTE_LIGHT_TOGGLE_NAME="切换到深色模式"
      export DOCS_PALETTE_DARK_TOGGLE_NAME="切换到浅色模式"
+@@ -84,7 +84,9 @@ SITE_DIR="${SITE_DIR:-$(pwd)/site}"
+ 
+ # --- Run mkdocs ------------------------------------------------------------
+ echo "[rtd-build] Building docs (DOCS_LANG=$DOCS_LANG, DOCS_IS_RELEASE=$DOCS_IS_RELEASE, site_dir=$SITE_DIR)..."
++# 离线打包去掉 --strict：上游文档常出现 nav 引用已删页面、跨页锚点失效等 warning，
++# strict 会让整站构建因一条 warning 中止，而离线产物并不需要这道质量门禁。
++# 链接问题属于上游文档维护范畴，构建后再用 audit-offline.py 检查真正影响离线的问题。
+ exec mkdocs build \
+     --site-dir "$SITE_DIR" \
+-    --clean \
+-    --strict
++    --clean

@@ -58,16 +58,20 @@ for name in vllm-ascend recipes ruff uv ty vllm-omni litellm-docs; do
       ;;
   esac
 
-  git -C "$repo" diff --binary --no-color -- . ${excludes[@]+"${excludes[@]}"} > "$target"
+  # 对比 HEAD 而不是「工作区 vs 暂存区」：
+  # apply-patches.sh 用 git apply --3way，它会把应用结果写进暂存区，
+  # 若只比 git diff，刚打完补丁的仓库会被误判为「无改动」并生成空补丁。
+  # 加 --binary 保留 png / ico 等二进制新增文件。
+  tmp="$target.tmp"
+  git -C "$repo" diff HEAD --binary --no-color -- . ${excludes[@]+"${excludes[@]}"} > "$tmp"
 
-  if [ -s "$target" ]; then
+  # 空结果绝不落盘：宁可留着上一版补丁，也不要用空文件把已有补丁冲掉
+  if [ -s "$tmp" ]; then
+    mv "$tmp" "$target"
     echo "已更新 $target ($(grep -c '^diff --git' "$target" || true) 个文件)"
   else
-    echo "警告: $repo 没有未提交改动，$target 为空" >&2
-  fi
-
-  if [ -n "$(git -C "$repo" diff --cached --name-only)" ]; then
-    echo "提示: $repo 存在已暂存的改动，它们不会写入补丁（请先 git add -p / git reset）" >&2
+    rm -f "$tmp"
+    echo "警告: $repo 与 HEAD 无差异，保留原补丁不动: $target" >&2
   fi
 done
 

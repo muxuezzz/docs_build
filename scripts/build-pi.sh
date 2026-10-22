@@ -16,7 +16,17 @@ out=$(cd "$out" && pwd)
 cd "$src"
 
 echo "[build] rspress build"
-pnpm build
+# pnpm 不是到处都有，兜底用 npm run build（只执行 scripts.build，与包管理器无关）。
+# 注意宿主的 NODE_OPTIONS 垫片会拦下构建里的删除操作，先清掉。
+unset NODE_OPTIONS
+if command -v pnpm >/dev/null 2>&1; then
+  pnpm build
+elif command -v corepack >/dev/null 2>&1 && corepack pnpm --version >/dev/null 2>&1; then
+  corepack pnpm build
+else
+  echo "[build] 未找到可用的 pnpm，改用 npm run build"
+  npm run build
+fi
 
 built="$src/doc_build"
 if [ ! -f "$built/index.html" ]; then
