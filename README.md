@@ -18,6 +18,32 @@ GitHub Actions（手动触发）
 用补丁而不是 fork，是为了让「上游代码」和「你的个性化改动」保持分离：
 上游更新后重新打补丁即可，冲突点也一目了然。
 
+## 每个流程的预估时间
+
+checkout 上游 + 打补丁都在 1 分钟内（vllm-ascend 全量克隆约 120 MB，其余更快），
+时间基本全花在构建上。下表「实测」是这台 Windows 机器（8 核、node_modules 与
+Python venv 已就绪、外网可用）跑出来的；「CI 预估」是 GitHub 托管 runner 上的
+经验值，比本机快一些，但每个 job 都要重新装依赖，首次会更慢。两者都**不含**首次
+装工具链（pip / npm / Rust / uv）。
+
+| 流程 | 实测 | CI 预估 | 时间花在哪 |
+| --- | --- | --- | --- |
+| vllm-ascend（单语） | ~20 秒 | 3–5 分钟 | 构建本身极快，CI 主要在装 pip 依赖 |
+| vllm-ascend（`both`） | ~40 秒 | 5–8 分钟 | 中英各跑一遍 |
+| recipes MkDocs | ~1 分钟 | 3–5 分钟 | privacy 插件逐张抓正文外链图片 |
+| recipes Next | ~22 分钟 | 10–15 分钟 | 生成 1.9 万个 API JSON 占 90%（约 20 分钟），`next build` 只要 2 分钟 |
+| ruff | 5–10 分钟（估） | 8–12 分钟 | `cargo dev` 现场编 Rust 导出规则页 |
+| uv | 10–20 分钟（估） | 12–20 分钟 | 同上，还要生成 CLI / 环境变量参考页 |
+| ty | 1–2 分钟（估） | 3–5 分钟 | 参考页已入库，不需要 Rust |
+| Pi | ~1 分钟 | 3–4 分钟 | `pnpm install` 占大头 |
+| LiteLLM | ~31 分钟 | 20–30 分钟 | 3358 张图过一遍 optimize-images |
+| vLLM-Omni | ~56 分钟 | 50–70 分钟 | 1855 页，每页重新解析整个包 |
+| **build-all（全并行）** | ≈ 最慢的那个（vllm-omni） | ≈ 60–70 分钟 | 各 job 并行，总时长被 omni 拖住 |
+
+工作流的 `timeout-minutes` 都按上表留了余量：recipes 的 Next job 120 分钟、
+vllm-omni 150 分钟，其余 60–120 分钟。实测某个站点明显超过 1.5 倍预估时间时，
+先看是不是在「Collecting build traces」或者外链抓取上卡住，而不是直接加超时。
+
 ## 目录
 
 | 路径 | 说明 |
@@ -39,7 +65,7 @@ GitHub Actions（手动触发）
 | 补丁 | 改了什么 |
 | --- | --- |
 | `patches/vllm-ascend` | `offline`/`privacy` 插件、去 CDN 字体、site_url/repo_url 换内网地址 |
-| `patches/recipes` | 同上 + `output: 'export'`、logo 从 docs.vllm.ai 下载到 `public/logos`、去掉首页 `meta refresh` 跳转、去掉 Material 的 GitHub star 请求、移除无人使用的 MathJax |
+| `patches/recipes` | MkDocs 站：关闭 `strict`、去掉 Material 的 GitHub star 请求、移除无人使用的 MathJax；Next 站：`output: 'export'`、logo 从 docs.vllm.ai 下载到 `public/logos`、去掉首页 `meta refresh` 跳转、**侧边栏 props 裁到 5 个字段（产物 1.5 GB → 343 MB）** |
 | `patches/ruff` | 在 `mkdocs.template.yml` 里加 `font: false` + `privacy`/`offline`，去 fathom 统计，去 docs.astral.sh 图标外链，`source.html` 去掉 `api.github.com` 请求 |
 | `patches/uv` | 同 ruff（配置在 `mkdocs.yml`） |
 | `patches/ty` | 同 ruff（配置在 `mkdocs.yml`） |
@@ -126,15 +152,39 @@ gh run watch
 | --- | --- | --- |
 | `vllm-ascend-docs-zh` / `-en` | MkDocs 站点 zip | ~15–30 MB |
 | `recipes-mkdocs-offline` | MkDocs 站点 zip | 几十 MB |
-| `recipes-next-offline` | Next.js 静态站点 zip | ~300 MB（解压 ~1.5 GB） |
+| `recipes-next-offline` | Next.js 静态站点 zip | **~56 MB（解压 343 MB / 20760 文件）** |
 | `ruff-offline` / `uv-offline` / `ty-offline` | MkDocs 站点 zip | ~10–25 MB |
 | `pi-docs-offline` | rspress 静态站点 zip | ~20 MB |
 | `litellm-docs-offline` | Docusaurus 静态站点 zip | ~700 MB（解压 ~730 MB） |
 | `vllm-omni-offline` | MkDocs 站点 zip | ~200 MB（解压 207 MB，1855 页） |
 
-> `recipes-next` 解压后 1.5 GB，其中绝大部分是各模型厂商的 logo —— `pnpm build` 里的
-> `fetch-provider-logos.mjs` 会把它们下载到 `public/`（Qwen 220 MB、nvidia 203 MB…）。
-> 这是上游行为，线上站点也一样；嫌大只能改那个脚本。
+### recipes-next 为什么曾经有 1.5 GB，现在只有 343 MB
+
+2026-10-23 实测的构成（优化前 → 优化后）：
+
+| 部分 | 优化前 | 优化后 | 说明 |
+| --- | --- | --- | --- |
+| 447 个页面的 `html` | 726 MB | 109 MB | 每页内联一份 RSC payload |
+| 449 个 `txt`（RSC payload） | 658 MB | 85 MB | 客户端跳转时用 |
+| 19769 个 API `json` | 101 MB | 101 MB | 真实内容，`build-recipes-api.mjs` 生成 |
+| `_next` 静态资源 | 1.5 MB | 1.5 MB | 正常 |
+| `/providers` 厂商图标 | 269 KB | 269 KB | 一共 43 个文件，**不是**体积瓶颈 |
+
+真正的冗余在侧边栏：`src/app/[org]/layout.js` 把 `getAllRecipes()` 的**完整对象**
+（每条带 `meta` / `variants` / `features` / `omni` / `model` / `hardware_overrides`，
+约 2.8 KB）作为 props 传给客户端组件 `ModelSidebar`。客户端组件的 props 会被静态
+导出序列化进**每一个页面**——192 条 ≈ 540 KB，而这份数据在 `html` 内联脚本和同名
+`.txt` 里各存一份，447 个页面就是 1 GB 级的纯重复。
+
+`patches/recipes` 里把这个 props 裁成侧边栏真正用到的 5 个字段
+（`hf_id` / `hf_org` / `hf_repo` / `meta.title` / `meta.provider` / `meta.tasks`），
+体积降到约 25 KB/页：产物 1.48 GB → 343 MB，zip 306 MB → 56 MB，页面大小
+1.86 MB → 360 KB，而侧边栏的展开/高亮/搜索行为完全不变（实测 `Qwen/…` 页仍渲染
+33 个同 org 模型链接，外链 0）。
+
+要继续瘦身，下一个目标是每页那份 `txt`（只服务客户端跳转）：如果接受「站内跳转
+走整页刷新」，可以把 `*.txt` 全删掉，还能再省 ~85 MB。
+
 
 下载解压后：
 
@@ -219,17 +269,25 @@ node scripts/check-site-offline.mjs out/litellm-docs --sample 6
 
 ## 已知注意点
 
-- **recipes 的 Next 构建依赖网络**：`pnpm build` 会执行 `fetch-provider-logos.mjs`
-  和 `fetch-hf-dates.mjs` 去抓 huggingface 的头像与日期。GitHub 托管 runner 上没问题，
-  但如果某天 HF 限流，这两个脚本可能让构建变慢或失败。
-- **mkdocs 用了 `--strict`**：任何 warning 都会变成失败。想放宽就去掉脚本里的
-  `--strict`（两个 `build-recipes-mkdocs.sh` / `tools/rtd_build.sh` 各自持有）。
+- **recipes 的 Next 构建依赖网络**：`pnpm build` 会执行 `build-recipes-api.mjs`
+  （纯本地，但要在 Windows 上生成 1.9 万个 JSON，约 20 分钟）、`fetch-provider-logos.mjs`
+  （抓 huggingface 头像）、`fetch-hf-dates.mjs`（抓发布日期），最后 `next build`
+  里的 `next/font/google` 还要从 Google Fonts 下字体。GitHub 托管 runner 上前两个
+  没问题，但断网时会分别报 `NextFontError: Failed to fetch ...` 或让 logo 抓取变慢。
+  前两个脚本都**跳过已存在的文件**，所以第二次构建会快很多。
+- **recipes 的 MkDocs 不再用 `--strict`**：补丁把 `mkdocs.yml` 的 `strict: true` 改成了
+  `false`。privacy 插件抓外链时，上游任一外链 404（ajv）或超时（vimeo）都会变成
+  warning，strict 会让整站构建中止。要复现严格行为手动跑 `mkdocs build --strict`。
 - **`git-revision-date-localized`** 需要完整 git 历史，所以 recipes 的 MkDocs 任务
   用了 `fetch-depth: 0`；vllm-ascend 为了 `git apply --3way` 能拿到基础 blob 也用了 0。
 - 仓库体积：vllm-ascend 全量 clone 约 120 MB，recipes 更大；各任务是独立 job，互不影响。
 - **Astral 的 ruff / uv 需要 Rust**：`cargo dev generate-docs`（ruff）和
   `cargo dev generate-*-reference`（uv）要现场编译，首次 10–20 分钟，
   有 `Swatinem/rust-cache` 后重复构建会快很多。ty 的参考页已入库，不需要 Rust。
+- **本机 uv 版本要够新**：ty / uv 的 `pyproject.toml` 用了
+  `[tool.uv] require-build-hashes` 和带 `hashes` 的 build-constraint 写法，
+  uv 0.12.15 会直接报 `unknown field require-build-hashes` 然后退出。
+  CI 用 `astral-sh/setup-uv@v10` 装最新版没问题；本机先 `uv self update`。
 - **`privacy` 插件在构建期仍要联网**：它把 markdown 里的外链图片下载到 `assets/external/`，
   产物本身不再请求外网。构建机上没网就会失败。**注意它下载时没有超时**：vllm-omni 的
   `mkdocs.yml` 因此没用 `privacy`，改由 `scripts/localize-external-assets.py` 在构建后处理
@@ -252,7 +310,8 @@ node scripts/check-site-offline.mjs out/litellm-docs --sample 6
   1. 宿主通过 `NODE_OPTIONS` 注入的 `--require` 垫片会拦下 `next` 构建脚本里的 `rmSync`，
      各构建脚本已在开头 `unset NODE_OPTIONS`。
   2. `next build` 偶尔在 `EPERM: open '.next/trace'` / `EPERM: open 'out/404.html'`
-     上直接失败。先手动建好这两个空文件再跑即可通过；脚本里也已经 `rm -rf .next`。
+     上直接失败。脚本已经 `rm -rf .next` 并预建空的 `.next/trace`；`out/404.html` 还是
+     报错的话，把 `out/` 改名挪走（`mv out out_old`）再重跑，别用 `rm -rf out` 逐个删。
 - **外链本地化写的是相对路径**：`localize-external-assets.py` 会把
   `https://…/a.png` 改写成 `../../assets/external/<sha1>.png`，这样 MkDocs 站点在
   `file://` 下直接打开也不会断图（根路径 `/assets/...` 在 `file://` 下会指向磁盘根）。

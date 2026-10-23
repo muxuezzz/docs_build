@@ -32,6 +32,9 @@ export NEXT_PUBLIC_SITE_URL="$site_url"
 # 上一次构建残留的 .next 在 Windows 上常留下文件锁，下次 build 会报
 # EPERM: operation not permitted, open '.next/trace'。CI 是干净克隆，没有这个目录。
 rm -rf .next
+# Windows 上即使删掉了 .next，next 自己创建 trace 文件时也可能 EPERM。
+# 先手动建好空文件最省事；CI 上这一行没有副作用。
+mkdir -p .next && : > .next/trace
 
 echo "[build] next build (NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL)"
 # pnpm 不是到处都有：CI 用 pnpm/action-setup 装上，本机可能只有 corepack 或 npm。

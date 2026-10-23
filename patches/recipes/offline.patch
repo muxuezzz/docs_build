@@ -924,6 +924,41 @@ index 6921396..edbfe71 100644
                  target="_blank"
                  rel="noopener noreferrer"
                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-vllm-blue transition-colors"
+diff --git a/src/app/[org]/layout.js b/src/app/[org]/layout.js
+index ba28b47..3cc3d4a 100644
+--- a/src/app/[org]/layout.js
++++ b/src/app/[org]/layout.js
+@@ -25,9 +25,29 @@ export default async function OrgLayout({ children }) {
+     });
+   }
+ 
++  // 离线产物体积优化：ModelSidebar 是客户端组件，它收到的 props 会被 Next 的
++  // 静态导出序列化进**每一个页面**的 RSC payload（HTML 内联脚本 + 同目录 .txt
++  // 各存一份）。原来直接把 getAllRecipes() 的完整对象传过去，一条约 2.8 KB
++  // （meta / variants / features / omni / model / hardware_overrides…），
++  // 192 条 ≈ 540 KB/页，450 页就是 450 MB 纯冗余数据。
++  // 侧边栏实际只用到下面这几个字段，裁剪后约 25 KB/页。
++  const sidebar = sorted.map(([org, models]) => [
++    org,
++    models.map((m) => ({
++      hf_id: m.hf_id,
++      hf_org: m.hf_org,
++      hf_repo: m.hf_repo,
++      meta: {
++        title: m.meta?.title,
++        provider: m.meta?.provider,
++        tasks: m.meta?.tasks,
++      },
++    })),
++  ]);
++
+   return (
+     <div className="max-w-[1480px] mx-auto px-4 sm:px-6 flex gap-6">
+-      <ModelSidebar recipesByOrg={sorted} />
++      <ModelSidebar recipesByOrg={sidebar} />
+       <div className="flex-1 min-w-0">
+         {children}
+       </div>
 diff --git a/src/app/[org]/page.js b/src/app/[org]/page.js
 index b3f8adf..4a49f36 100644
 --- a/src/app/[org]/page.js
