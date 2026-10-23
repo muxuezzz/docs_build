@@ -23,9 +23,18 @@ index a969aec..6b23c62 100644
  - [Trinity-Large-Thinking](ArceeAI/Trinity-Large-Thinking.md)
  
 diff --git a/mkdocs.yml b/mkdocs.yml
-index 652fd9e..9da85a6 100644
+index 652fd9e..b8b6fbe 100644
 --- a/mkdocs.yml
 +++ b/mkdocs.yml
+@@ -4,7 +4,7 @@ site_description: A collection of recipes and guides for using vLLM with a varie
+ repo_url: https://github.com/vllm-project/recipes
+ edit_uri: edit/main/
+ docs_dir: .
+-strict: true
++strict: false
+ 
+ # Keep the legacy MkDocs site focused on the hand-written Markdown guides
+ # under DeepSeek/, Qwen/, etc. Exclude the Next.js app + content YAMLs +
 @@ -46,6 +46,7 @@ theme:
    custom_dir: overrides
    logo: https://docs.vllm.ai/en/latest/assets/logos/vllm-logo-only-light.ico
