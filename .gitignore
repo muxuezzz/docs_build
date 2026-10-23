@@ -5,19 +5,13 @@
 *.zip
 .DS_Store
 
-# 本地构建日志与审计报告
-.*-build.log
-.*-verbose.log
-.lit-*.json
-*.audit.json
-
 # WorkBuddy 本地记忆，不入库
 .workbuddy/
 
-# 本地构建/审计日志
-.build.log
-.*-build.log
-.*-audit.txt
-.*-audit.json
-.*-localize.json
+# 浏览器离线验证用的 puppeteer 依赖
 .verify/
+
+# 本地构建/审计日志与中间报告（根目录下的隐藏文件）
+/.*.log
+/.*.json
+/.*.txt
