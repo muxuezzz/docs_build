@@ -287,7 +287,11 @@ node scripts/check-site-offline.mjs out/litellm-docs --sample 6
 - **本机 uv 版本要够新**：ty / uv 的 `pyproject.toml` 用了
   `[tool.uv] require-build-hashes` 和带 `hashes` 的 build-constraint 写法，
   uv 0.12.15 会直接报 `unknown field require-build-hashes` 然后退出。
-  CI 用 `astral-sh/setup-uv@v10` 装最新版没问题；本机先 `uv self update`。
+  CI 用 `astral-sh/setup-uv@v10.3.3` 装最新版没问题；本机先 `uv self update`。
+- **`setup-uv` 必须写完整版本号**：它**不发布滚动大版本 tag**（`v10` / `v9` / `v8` 都不存在，
+  只有 `v10.3.3` 这类完整号）。写成 `@v10` 会在「解析 action」阶段就失败，报
+  `Unable to resolve action astral-sh/setup-uv@v10, unable to find version v10`，
+  job 连第一步都跑不到。升级时去 releases 页改完整版本号。
 - **`privacy` 插件在构建期仍要联网**：它把 markdown 里的外链图片下载到 `assets/external/`，
   产物本身不再请求外网。构建机上没网就会失败。**注意它下载时没有超时**：vllm-omni 的
   `mkdocs.yml` 因此没用 `privacy`，改由 `scripts/localize-external-assets.py` 在构建后处理

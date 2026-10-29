@@ -89,8 +89,11 @@ jobs:
       - name: 应用离线化补丁
         run: bash build-tools/scripts/apply-patches.sh src build-tools/patches/${{ matrix.project }}
 
+      # setup-uv 不发布滚动大版本 tag（v10 / v9 / v8 都不存在，只有 v10.3.3 这类完整版本号），
+      # 写成 @v10 会在「解析 action」阶段直接失败：Unable to resolve action ... unable to find version v10。
+      # 升级时改这里的完整版本号即可：https://github.com/astral-sh/setup-uv/releases
       - name: 安装 uv
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           python-version: '3.13'
           enable-cache: true
