@@ -4,6 +4,10 @@ name: 离线文档 · Astral (ruff / uv / ty)
 #   ruff —— cargo dev 导出规则页（需要 Rust，约 5-10 分钟）
 #   uv   —— cargo dev 生成 CLI/选项/环境变量参考页（需要 Rust，首次约 10-20 分钟）
 #   ty   —— 参考页已入库，直接构建（无需 Rust，最快）
+#
+# ref 支持按项目单独指定：三个仓库发版节奏不同，想固定某个仓库的 tag
+# （例如 uv 用 0.9.0 而不跟 main）就填对应的 ruff_ref / uv_ref / ty_ref；
+# 留空则回落到公用的 ref。plan job 把「项目 + 各自 ref」拼成矩阵交给 build job。
 on:
   workflow_dispatch:
     inputs:
@@ -17,9 +21,21 @@ on:
           - ty
         default: all
       ref:
-        description: 上游 git ref（三个仓库共用同一个 ref）
+        description: 三个仓库的默认 ref（下面留空的项都用它）
         type: string
         default: main
+      ruff_ref:
+        description: ruff 专用 ref（留空 = 用上面的默认 ref）
+        type: string
+        default: ''
+      uv_ref:
+        description: uv 专用 ref（留空 = 用上面的默认 ref）
+        type: string
+        default: ''
+      ty_ref:
+        description: ty 专用 ref（留空 = 用上面的默认 ref）
+        type: string
+        default: ''
       publish_release:
         description: 构建完成后发布到 GitHub Release
         type: boolean
@@ -32,6 +48,15 @@ on:
       ref:
         type: string
         default: main
+      ruff_ref:
+        type: string
+        default: ''
+      uv_ref:
+        type: string
+        default: ''
+      ty_ref:
+        type: string
+        default: ''
       publish_release:
         type: boolean
         default: false
@@ -40,7 +65,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: offline-astral-${{ inputs.ref }}-${{ inputs.project }}
+  group: offline-astral-${{ inputs.project }}
   cancel-in-progress: true
 
 jobs:
@@ -48,27 +73,60 @@ jobs:
     name: 解析构建矩阵
     runs-on: ubuntu-latest
     outputs:
-      projects: ${{ steps.set.outputs.projects }}
+      matrix: ${{ steps.set.outputs.matrix }}
+      refs: ${{ steps.set.outputs.refs }}
     steps:
       - id: set
         shell: bash
+        env:
+          PROJECT: ${{ inputs.project }}
+          DEFAULT_REF: ${{ inputs.ref }}
+          RUFF_REF: ${{ inputs.ruff_ref }}
+          UV_REF: ${{ inputs.uv_ref }}
+          TY_REF: ${{ inputs.ty_ref }}
         run: |
-          case "${{ inputs.project }}" in
-            ruff) echo 'projects=["ruff"]' >> "$GITHUB_OUTPUT" ;;
-            uv)   echo 'projects=["uv"]'   >> "$GITHUB_OUTPUT" ;;
-            ty)   echo 'projects=["ty"]'   >> "$GITHUB_OUTPUT" ;;
-            *)    echo 'projects=["ruff","uv","ty"]' >> "$GITHUB_OUTPUT" ;;
+          set -euo pipefail
+
+          case "$PROJECT" in
+            ruff|uv|ty) list="$PROJECT" ;;
+            *)          list="ruff uv ty" ;;
           esac
 
+          # 各项目自己的 ref 优先，留空才回落到公用默认值
+          ref_for() {
+            local proj="$1" override="" ref=""
+            case "$proj" in
+              ruff) override="${RUFF_REF:-}" ;;
+              uv)   override="${UV_REF:-}"   ;;
+              ty)   override="${TY_REF:-}"   ;;
+            esac
+            ref="${override:-${DEFAULT_REF:-}}"
+            printf '%s' "${ref:-main}"
+          }
+
+          matrix='['
+          refs=''
+          for p in $list; do
+            r="$(ref_for "$p")"
+            matrix="$matrix{\"project\":\"$p\",\"ref\":\"$r\"},"
+            refs="$refs $p=$r"
+          done
+          matrix="${matrix%,}]"
+          refs="${refs# }"
+
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "refs=$refs" >> "$GITHUB_OUTPUT"
+          echo "构建矩阵: $matrix"
+
   build:
-    name: 构建 ${{ matrix.project }}
+    name: 构建 ${{ matrix.project }} @ ${{ matrix.ref }}
     needs: plan
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        project: ${{ fromJSON(needs.plan.outputs.projects) }}
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - name: 检出构建仓库（补丁与脚本）
         uses: actions/checkout@v4
@@ -79,7 +137,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: astral-sh/${{ matrix.project }}
-          ref: ${{ inputs.ref }}
+          ref: ${{ matrix.ref }}
           path: src
           # uv/ty 的 git-revision-date 插件需要完整历史；ruff 不需要
           fetch-depth: ${{ matrix.project == 'ruff' && 1 || 0 }}
@@ -139,14 +197,14 @@ jobs:
           {
             echo "### ${{ matrix.project }} 离线文档"
             echo ''
-            echo "- 上游 ref: \`${{ inputs.ref }}\`"
+            echo "- 上游 ref: \`${{ matrix.ref }}\`"
             echo "- 产物: \`${{ matrix.project }}-offline.zip\` ($(du -h "dist/${{ matrix.project }}-offline.zip" | cut -f1))"
             echo "- 已关闭 Google Fonts / fathom 统计，外链图片由 privacy 插件本地化"
           } >> "$GITHUB_STEP_SUMMARY"
 
   release:
     name: 发布 Release
-    needs: [build]
+    needs: [plan, build]
     if: inputs.publish_release
     runs-on: ubuntu-latest
     permissions:
@@ -166,5 +224,5 @@ jobs:
           tag="astral-offline-$(date -u +%Y%m%d)-${{ github.run_number }}"
           gh release create "$tag" dist/*.zip \
             --title "Astral 离线文档 $tag" \
-            --notes "手动触发的离线文档构建。上游 ref: \`${{ inputs.ref }}\`，项目: ${{ inputs.project }}。触发人: @${{ github.actor }}"
+            --notes "手动触发的离线文档构建。上游 ref: \`${{ needs.plan.outputs.refs }}\`。触发人: @${{ github.actor }}"
           echo "已发布: $tag" >> "$GITHUB_STEP_SUMMARY"

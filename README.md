@@ -92,6 +92,8 @@ mkdocs-material 的仓库按钮带 `data-md-component="source"` 时，`bundle.js
 gh workflow run "离线文档 · vLLM Ascend" -f lang=zh -f ref=main
 gh workflow run "离线文档 · vLLM Recipes" -f site=all -f ref=main
 gh workflow run "离线文档 · Astral (ruff / uv / ty)" -f project=all -f ref=main
+# 只把 uv 固定在某个 tag，ruff/ty 仍跟 main：
+gh workflow run "离线文档 · Astral (ruff / uv / ty)" -f project=all -f uv_ref=0.9.0
 gh workflow run "离线文档 · Pi 中文文档" -f ref=master
 gh run watch
 ```
@@ -121,8 +123,20 @@ gh run watch
 | 参数 | 说明 |
 | --- | --- |
 | `project` | `ruff` / `uv` / `ty` / `all`，每个项目一个并行 job |
-| `ref` | 三个仓库共用同一个 ref，默认 `main` |
+| `ref` | 三个仓库的**默认** ref，默认 `main`；下面三项留空时都用它 |
+| `ruff_ref` | ruff 专用 ref，可填 tag / commit（如 `0.14.0`）；留空 = 用 `ref` |
+| `uv_ref` | uv 专用 ref（如 `0.9.0` 而非 `main`）；留空 = 用 `ref` |
+| `ty_ref` | ty 专用 ref；留空 = 用 `ref` |
 | `publish_release` | 同上 |
+
+> 三个仓库发版节奏不一样，想固定某个仓库的版本只填它自己的那一项即可，
+> 例如 `project=all` + `uv_ref=0.9.0` 会构建 `ruff@main` / `uv@0.9.0` / `ty@main`。
+> plan job 先在日志里打印解析出的矩阵（`构建矩阵: [...]`），矩阵里的 ref 就是
+> 每个 job 实际 checkout 的 ref，也直接写进 job 名和构建摘要。
+>
+> 注意：补丁是针对**当前上游**写的，钉到一个很旧的 tag（比如 ruff 0.9.x）时
+> `git apply --3way` 很可能冲突、构建失败。要长期固定旧版本，得另外导出一份
+> 对应版本的补丁（`make-patches.sh` 是在本地 checkout 上导出的）。
 
 **Pi 中文文档**
 

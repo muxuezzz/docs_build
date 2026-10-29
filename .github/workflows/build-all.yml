@@ -37,9 +37,21 @@ on:
         type: string
         default: main
       ref_astral:
-        description: astral 三个仓库共用的上游 ref
+        description: astral 三个仓库的默认 ref（下面留空的项都用它）
         type: string
         default: main
+      ref_ruff:
+        description: ruff 专用 ref（留空 = 用 ref_astral）
+        type: string
+        default: ''
+      ref_uv:
+        description: uv 专用 ref（留空 = 用 ref_astral）
+        type: string
+        default: ''
+      ref_ty:
+        description: ty 专用 ref（留空 = 用 ref_astral）
+        type: string
+        default: ''
       ref_pi:
         description: Pi 文档上游 ref
         type: string
@@ -88,6 +100,9 @@ jobs:
     with:
       project: ${{ inputs.astral }}
       ref: ${{ inputs.ref_astral }}
+      ruff_ref: ${{ inputs.ref_ruff }}
+      uv_ref: ${{ inputs.ref_uv }}
+      ty_ref: ${{ inputs.ref_ty }}
       publish_release: ${{ inputs.publish_release }}
 
   pi:
