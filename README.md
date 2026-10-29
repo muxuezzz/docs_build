@@ -289,6 +289,14 @@ node scripts/check-site-offline.mjs out/litellm-docs --sample 6
   里的 `next/font/google` 还要从 Google Fonts 下字体。GitHub 托管 runner 上前两个
   没问题，但断网时会分别报 `NextFontError: Failed to fetch ...` 或让 logo 抓取变慢。
   前两个脚本都**跳过已存在的文件**，所以第二次构建会快很多。
+- **privacy 插件会被属性值里的 `>` 截断**：Material 的 privacy 用正则
+  `r"<(?:(?:a|link|image)[^>]+href|(?:script|img)[^>]+src)=…([^>]+)>"` 抠出外链标签，
+  属性值里只要出现 `>`，匹配就提前结束，`FragmentParser` 拿到半截 HTML，直接抛
+  `Couldn't parse due to possible syntax error in HTML` 并中止整站（不是 markdown 解析错，
+  是插件报的）。ruff 的 `docs/editors/features.md` 原来写着
+  ``alt="Editing a `pyproject.toml` …"``，`pymdownx.inlinehilite` 把反引号渲染成
+  `<code>`，那个 `>` 就把标签截断了 —— 补丁已去掉 alt 里的反引号。
+  **图片的 alt 里不要用 markdown 语法**；自查：`grep -rn 'alt="[^"]*[<>`]' docs/`。
 - **recipes 的 MkDocs 不再用 `--strict`**：补丁把 `mkdocs.yml` 的 `strict: true` 改成了
   `false`。privacy 插件抓外链时，上游任一外链 404（ajv）或超时（vimeo）都会变成
   warning，strict 会让整站构建中止。要复现严格行为手动跑 `mkdocs build --strict`。

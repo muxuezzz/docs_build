@@ -37,6 +37,19 @@ index 0000000000..0d1a76433a
 +  </div>
 +</a>
 +{% endif %}
+diff --git a/docs/editors/features.md b/docs/editors/features.md
+index 1d0482f04a..cf3cbebaf5 100644
+--- a/docs/editors/features.md
++++ b/docs/editors/features.md
+@@ -22,7 +22,7 @@ changes to the configuration file and thus will not refresh the diagnostics.
+ 
+ <img
+ src="https://astral.sh/static/GIF/v0.4.5/config_reload_vscode.gif"
+-alt="Editing a `pyproject.toml` configuration file in VS Code"
++alt="Editing a pyproject.toml configuration file in VS Code"
+ />
+ 
+ ## Formatting
 diff --git a/mkdocs.template.yml b/mkdocs.template.yml
 index 5b78cfbeac..fdf30d2e99 100644
 --- a/mkdocs.template.yml
