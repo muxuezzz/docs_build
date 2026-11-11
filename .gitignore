@@ -7,6 +7,7 @@
 
 # WorkBuddy 本地记忆，不入库
 .workbuddy/
+.workbuddy-ai/
 
 # 浏览器离线验证用的 puppeteer 依赖
 .verify/
@@ -15,3 +16,6 @@
 /.*.log
 /.*.json
 /.*.txt
+
+# load-images.sh 下载的镜像 tar 与 MANIFEST.tsv 缓存
+/image-tarballs/

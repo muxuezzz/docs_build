@@ -55,8 +55,12 @@ vllm-omni 150 分钟，其余 60–120 分钟。实测某个站点明显超过 1
 | `.github/workflows/build-litellm.yml` | LiteLLM 文档（Docusaurus 3.8） |
 | `.github/workflows/build-vllm-omni.yml` | vLLM-Omni 文档（MkDocs + mkdocstrings） |
 | `.github/workflows/build-all.yml` | 一键构建以上全部 |
+| `.github/workflows/mirror-images.yml` | 独立的镜像中转：crane 拉镜像 → tar → Release |
+| `images.txt` | 镜像中转的默认镜像清单 |
 | `patches/*/offline.patch` | 各项目的离线化补丁（详见下表） |
 | `scripts/apply-patches.sh` | 在 CI 中按序打补丁 |
+| `scripts/load-images.sh` | 本机从 Release 下载、校验、导入镜像 tar |
+| `scripts/plan-images.py` / `merge-manifest.py` | 清单解析与 `MANIFEST.tsv` 合并 |
 | `scripts/make-patches.sh` | 从本地仓库重新导出补丁 |
 | `scripts/build-*.sh` | 真正的构建命令，CI 与本地共用 |
 
@@ -211,6 +215,132 @@ gh run watch
 都不需要在目标机器上装 Node/Python 运行时。
 
 Artifacts 默认保留 30 天；要长期留存就勾 `publish_release`，或把 retention 改大。
+
+## 镜像中转：crane → tar → Release
+
+一条和文档构建无关的独立流水线。让 GitHub 托管 runner 替你去 registry 拉镜像，
+用 `crane pull --format tarball` 导出 `docker load` 能直接吃的 tar，
+再传到 Release；本机只负责从 Release 下载文件。
+
+**先说清楚它不解决什么。** 这套东西把「连不上 registry」换成「从 GitHub Release 下文件」，
+没有改变你的国际出口。如果 `objects.githubusercontent.com` 在你这儿一样不通，CI 跑得再欢也白搭，
+必须自己配 `IMAGE_MIRROR` 加速前缀或 `https_proxy`。它真正解决的是「连接脆弱」：
+`docker pull` 是几十层并发请求，断一层就得重来；Release 下载是单文件 HTTP，
+能断点续传、能重试、能被普通 HTTP 加速缓存。另外 Release 资产不计流量费，
+单个 release 的总大小没有上限。
+
+### 一次性配置
+
+1. **Settings → Actions → General → Workflow permissions** 勾 *Read and write permissions*
+   （本仓库其它流程发布 Release 也需要）。
+2. 按需加 secrets，不配也能跑：
+
+   | Secret | 用途 |
+   | --- | --- |
+   | `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` | Docker Hub 认证拉取。匿名是 **100 次 / 6 小时 / IP**，runner 用共享 IP，很容易撞限流 |
+   | `GHCR_TOKEN` | 拉 GHCR 私有镜像；不配就用 `github.token`（工作流已申请 `packages: read`） |
+   | `REGISTRY_HOST` / `REGISTRY_USERNAME` / `REGISTRY_PASSWORD` | 自建或第三方 registry |
+
+3. 免费额度：公开仓库的托管 runner 免费；私有仓库按套餐给分钟数（Free 为 2000 分钟/月）。
+   拉镜像主要烧的是分钟数和出口带宽，Release 资产本身不收流量费。
+
+### 触发
+
+网页：**Actions → 「镜像中转 · crane → tar → Release」→ Run workflow**。
+命令行：
+
+```bash
+gh workflow run "镜像中转 · crane → tar → Release" \
+  -f images=$'vllm/vllm-openai:v0.11.0\nghcr.io/some-org/app:v1.2.3' \
+  -f platform=linux/arm64 -f release_mode=fixed \
+  -f rename='vllm/vllm-openai:v0.11.0=vllm:v0.11.0,ghcr.io/some-org/app:v1.2.3=app:v1'
+gh run watch
+```
+
+`images` 留空时读仓库根目录的 `images.txt`（默认只有一行 `alpine:3.21` 用来验链路）。
+想定时刷新就自己给工作流加 `schedule`，别默认打开——自动拉大镜像会把免费分钟数烧光。
+
+### 输入参数
+
+| 参数 | 说明 |
+| --- | --- |
+| `images` | 镜像引用，换行 / 逗号 / 空格分隔；留空读 `images.txt`。支持 `repo:tag` 和 `repo@sha256:<64位hex>`。网页触发时是单行输入框，多个镜像用逗号隔开 |
+| `platform` | **下拉选架构**：`linux/amd64`（默认）/ `linux/arm64` / `linux/arm/v7` / `linux/ppc64le` / `linux/s390x` / `custom`。tarball 只装一个平台 |
+| `platform_custom` | `platform` 选 `custom` 时填自定义值，例如 `linux/riscv64` |
+| `rename` | 重命名：单个镜像直接填 `myalpine:3.21`；多个用 `原引用=新名字` 逗号分隔。同时改资产文件名和 `docker load` 后的 tag |
+| `release_mode` | `fixed`（默认）= 固定 tag、覆盖同名资产；`dated` = 每次新建 `images-YYYYMMDD-<run_number>` |
+| `release_tag` | `fixed` 模式用的 tag，默认 `images`。地址稳定，适合写进脚本 |
+| `max_asset_mb` | 单资产上限 MiB，默认 1800。超了自动切成 `.part00` / `.part01`… |
+| `only_missing` | 跳过 Release 里已存在的资产。**滚动 tag（`latest` 之类）别开**，否则永远拿不到新版本 |
+
+### 选架构与重命名
+
+**架构**：触发时直接从下拉里选。资产文件名带平台，所以同一个镜像分别选 amd64 / arm64
+各跑一次，两份资产共存、互不覆盖（两次运行会被 `concurrency` 排队，不会同时写坏同一个 Release）。
+
+**重命名**：填了 `rename` 后，资产文件名和 `docker load` 之后的 tag 都用新名字。
+底层 `crane pull` 仍按原引用拉，tar 里的 RepoTags 是原名，
+本地脚本导入后自动 `docker tag` 成新名字——原 tag 会保留，层是共享的，不额外占空间。
+
+```bash
+# 单个镜像：直接给名字，不用重复写原引用
+gh workflow run "镜像中转 · crane → tar → Release" \
+  -f images='alpine:3.21' -f platform=linux/arm64 -f rename='myalpine:3.21'
+
+# 多个镜像：逐条写「原引用=新名字」
+gh workflow run "镜像中转 · crane → tar → Release" \
+  -f images='alpine:3.21,nginx:1.27' \
+  -f rename='alpine:3.21=base:3.21,nginx:1.27=web:1.27'
+```
+
+`images.txt` / `images` 输入里也支持同样的内联语法（`alpine:3.21=myalpine:3.21`），
+`rename` 输入优先级更高。不带 tag 的新名字会自动补 `:latest`。
+网页触发时 `images` 和 `rename` 都是单行输入框，多个值用逗号隔开。
+
+### Release 里有什么
+
+- `MANIFEST.tsv`：资产索引，10 列 —— `ref / file / size / sha256 / parts / partsizes / digest / platform / load_tag / updated`。
+  每次运行只覆盖本次拉的镜像，其余行从旧清单继承。`load_tag` 就是导入后想要的名字。
+- `<镜像名>_<平台>.tar`：`docker save` 兼容格式，`docker load -i` 后 tag 是 `load_tag`
+  （默认等于原引用，重命名后是新名字）。平台编进文件名，amd64 / arm64 版本共存。
+- 镜像超过 `max_asset_mb` 时切成 `<file>.part00`…，本地脚本按 `partsizes` 逐卷下载、合并，
+  再对**完整 tar** 校验 sha256（不是逐卷校验）。
+
+### 本机下载并导入
+
+```bash
+# 看 Release 里有哪些镜像
+bash scripts/load-images.sh --repo OWNER/REPO --list
+
+# 下载 + 校验 + docker load（参数可填镜像引用，也可填资产文件名）
+bash scripts/load-images.sh --repo OWNER/REPO alpine:3.21
+bash scripts/load-images.sh --repo OWNER/REPO --all
+
+# 走加速前缀（拼在原始 URL 前面；也可以写成含 {url} 的模板）
+IMAGE_MIRROR='https://your-mirror.example/' bash scripts/load-images.sh --all
+
+# 只下载不导入 / 换运行时 / 只做链接连通性排查
+bash scripts/load-images.sh --no-load alpine:3.21
+bash scripts/load-images.sh --runtime podman --all
+```
+
+`--repo` 不填时从 `git remote origin` 推断，tag 默认 `images`，缓存在 `./image-tarballs/`
+（已加进 `.gitignore`）。下载按分卷大小判断完整性，中断后重跑会续传而不是重来。
+私有仓库的资产需要认证：设 `IMAGE_GITHUB_TOKEN`（或 `GH_TOKEN`），直连时脚本会带
+`Authorization: Bearer` 头。一旦配了 `IMAGE_MIRROR`，脚本会主动**不发**这个头，
+免得把 token 交给第三方代理；这时私有仓库请直连，或用 `gh release download` 手动下。
+
+### 已知限制
+
+- **GitHub 单资产必须小于 2 GiB**，单个 release 最多 1000 个资产；总大小和带宽没有硬上限。
+  默认 1800 MiB 就是给上限留余量，别把 `max_asset_mb` 调到 2000 以上。
+- **`repo@sha256:...` 引用会被 crane 打上 `:i-was-a-digest`**。本地脚本导入后自动 retag 成
+  `<repo>:sha256-<前12位>`（或用 `rename` 指定的名字），所以别指望 load 完还能看到原始 digest 引用。
+  重命名走的也是同一套 retag 逻辑；`ctr` 运行时没有 tag 命令，只能沿用原名。
+- **这不是镜像仓库**。想让内网其它机器 `docker pull`，得先 load 再 tag/push 到自己的 registry，
+  或者直接用 `crane push`。
+- 仓库设为私有时，Release 资产同样需要认证；`curl` 直连匿名会 404。
+- 每个镜像一个并行 job，单个失败不影响其它（`fail-fast: false`）；失败的那个不会进 `MANIFEST.tsv`。
 
 ## 更新个性化改动
 

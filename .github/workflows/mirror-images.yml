@@ -1,0 +1,364 @@
+name: 镜像中转 · crane → tar → Release
+
+# 用 GitHub 托管 runner 代替本机去 registry 拉镜像：
+#   crane pull  ->  docker load 兼容的 tar  ->  gh release upload
+# 本机再用 scripts/load-images.sh 从 Release 断点续传下载、校验 sha256、docker load。
+#
+# 触发时可选架构（platform 下拉），也可填 rename 重命名镜像；
+# 资产名 = 镜像名 + 平台，所以多架构 / 多别名可以共存于同一个 Release。
+#
+# 只手动触发：自动跑会把免费 Actions 分钟数烧在没人用的镜像上。
+# 想定时更新就自己加一行 schedule（见 README）。
+on:
+  workflow_dispatch:
+    inputs:
+      images:
+        description: 镜像引用，换行 / 逗号 / 空格分隔；留空则读仓库根目录 images.txt
+        type: string
+        default: ''
+      platform:
+        description: 目标架构（crane --platform）。想同时要多个架构就触发两次，资产名带平台不会互相覆盖
+        type: choice
+        options:
+          - linux/amd64
+          - linux/arm64
+          - linux/arm/v7
+          - linux/ppc64le
+          - linux/s390x
+          - custom
+        default: linux/amd64
+      platform_custom:
+        description: platform 选 custom 时填自定义值（os/arch[/variant]）
+        type: string
+        default: ''
+      rename:
+        description: 重命名镜像（docker load 后的名字与资产名）。单个镜像直接填名字；多个用「原引用=新名字」逗号分隔
+        type: string
+        default: ''
+      release_mode:
+        description: fixed = 固定 tag 覆盖同名资产；dated = 每次新建带日期的 Release
+        type: choice
+        options:
+          - fixed
+          - dated
+        default: fixed
+      release_tag:
+        description: fixed 模式使用的 Release tag（dated 模式忽略）
+        type: string
+        default: images
+      max_asset_mb:
+        description: 单个资产上限 MiB（GitHub 硬限 2 GiB，超过自动分卷）
+        type: string
+        default: '1800'
+      only_missing:
+        description: 跳过 Release 里已存在的资产；滚动 tag（如 latest）不要开
+        type: boolean
+        default: false
+
+# 建 Release / 上传资产要 write；从 GHCR 拉私有镜像要 packages: read
+permissions:
+  contents: write
+  packages: read
+
+# 同一个 fixed Release 上的并发写会互相覆盖资产，排队而不是取消
+concurrency:
+  group: mirror-images
+  cancel-in-progress: false
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  GH_REPO: ${{ github.repository }}
+  CRANE_VERSION: v0.22.1
+
+jobs:
+  plan:
+    name: 解析清单 / 准备 Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      platform: ${{ steps.tag.outputs.platform }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+      count: ${{ steps.plan.outputs.count }}
+    steps:
+      - name: 检出仓库（清单与脚本）
+        uses: actions/checkout@v4
+        with:
+          path: build-tools
+          persist-credentials: false
+
+      - name: 计算 Release tag 与平台
+        id: tag
+        env:
+          MODE: ${{ inputs.release_mode }}
+          FIXED_TAG: ${{ inputs.release_tag }}
+          RUN_NUMBER: ${{ github.run_number }}
+          PLATFORM_CHOICE: ${{ inputs.platform }}
+          PLATFORM_CUSTOM: ${{ inputs.platform_custom }}
+        run: |
+          set -euo pipefail
+          if [ "$MODE" = "dated" ]; then
+            tag="images-$(date -u +%Y%m%d)-${RUN_NUMBER}"
+          else
+            tag="${FIXED_TAG:-images}"
+          fi
+          platform="$PLATFORM_CHOICE"
+          if [ "$platform" = "custom" ]; then
+            platform="${PLATFORM_CUSTOM:-}"
+            [[ "$platform" =~ ^[a-z0-9]+/[a-z0-9]+(/[a-z0-9_-]+)?$ ]] || {
+              echo "::error::选了 custom 就必须填合法 platform_custom，例如 linux/riscv64"
+              exit 1
+            }
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "platform=$platform" >> "$GITHUB_OUTPUT"
+          echo "实际平台: $platform"
+
+      - name: 创建 / 复用 Release
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "复用已有 Release: $TAG"
+          else
+            gh release create "$TAG" \
+              --title "镜像 tar 中转 $TAG" \
+              --notes "由 crane 导出的 docker-load 兼容 tar。资产索引是 MANIFEST.tsv，下载与导入脚本见仓库 scripts/load-images.sh。"
+            echo "已创建 Release: $TAG"
+          fi
+
+      - name: 读取已有资产列表
+        if: inputs.only_missing
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          gh release view "$TAG" --json assets --jq '.assets[].name' > existing-assets.txt || true
+          wc -l existing-assets.txt
+
+      - name: 生成构建矩阵
+        id: plan
+        env:
+          IMAGES_INPUT: ${{ inputs.images }}
+          PLATFORM: ${{ steps.tag.outputs.platform }}
+          RENAME: ${{ inputs.rename }}
+          ONLY_MISSING: ${{ inputs.only_missing }}
+        run: |
+          set -euo pipefail
+          touch existing-assets.txt
+          python3 build-tools/scripts/plan-images.py build-tools/images.txt existing-assets.txt
+
+      - name: 写入摘要
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          COUNT: ${{ steps.plan.outputs.count }}
+          MATRIX: ${{ steps.plan.outputs.matrix }}
+        run: |
+          {
+            echo "### 镜像中转 · $TAG"
+            echo ''
+            echo "- 待处理镜像: $COUNT 个"
+            echo "- 平台: \`${{ steps.tag.outputs.platform }}\`，单资产上限: ${{ inputs.max_asset_mb }} MiB"
+            echo '- 矩阵:'
+            echo '```json'
+            echo "$MATRIX"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  pull:
+    name: 拉取 ${{ matrix.ref }}
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - name: 安装 crane
+        run: |
+          set -euo pipefail
+          asset="go-containerregistry_Linux_x86_64.tar.gz"
+          curl -fsSL --retry 3 \
+            "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/${asset}" \
+            -o /tmp/crane.tar.gz
+          tar -xzf /tmp/crane.tar.gz -C /tmp crane
+          sudo install -m 0755 /tmp/crane /usr/local/bin/crane
+          crane version
+
+      # crane 默认读 authn.DefaultKeychain（~/.docker/config.json），
+      # 所以 crane auth login 写入的凭据会被后面的 crane pull 自动使用。
+      - name: 登录镜像仓库
+        env:
+          REF: ${{ matrix.ref }}
+          ACTOR: ${{ github.actor }}
+          DH_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DH_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          REG_HOST: ${{ secrets.REGISTRY_HOST }}
+          REG_USER: ${{ secrets.REGISTRY_USERNAME }}
+          REG_TOKEN: ${{ secrets.REGISTRY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          # Docker Hub 匿名拉取按 IP 限流（100 次 / 6 小时），runner IP 是共享的，很容易撞上
+          if [ -n "$DH_USER" ] && [ -n "$DH_TOKEN" ]; then
+            printf '%s' "$DH_TOKEN" | crane auth login index.docker.io -u "$DH_USER" --password-stdin
+            echo "已登录 Docker Hub"
+          else
+            echo "::warning::未配置 DOCKERHUB_USERNAME / DOCKERHUB_TOKEN，匿名拉取可能触发 100 次/6 小时/IP 限流"
+          fi
+          case "$REF" in
+            ghcr.io/*)
+              printf '%s' "${GHCR_TOKEN:-$GH_TOKEN}" | crane auth login ghcr.io -u "$ACTOR" --password-stdin
+              echo "已登录 GHCR"
+              ;;
+          esac
+          if [ -n "$REG_HOST" ] && [ -n "$REG_USER" ] && [ -n "$REG_TOKEN" ]; then
+            printf '%s' "$REG_TOKEN" | crane auth login "$REG_HOST" -u "$REG_USER" --password-stdin
+            echo "已登录 $REG_HOST"
+          fi
+
+      - name: crane pull 导出 tar
+        env:
+          REF: ${{ matrix.ref }}
+          FILE: ${{ matrix.file }}
+          PLATFORM: ${{ needs.plan.outputs.platform }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist meta
+          echo "拉取 $REF（$PLATFORM）"
+          # --format tarball = docker save 兼容格式；显式 --platform，避免多架构 index 解析歧义
+          crane pull "$REF" "dist/$FILE" --platform "$PLATFORM" --format tarball
+          # tar 里必须有 manifest.json，否则 docker load 会直接失败
+          tar -tf "dist/$FILE" | grep -qx manifest.json
+          digest="$(crane digest "$REF" --platform "$PLATFORM" 2>/dev/null || echo unknown)"
+          echo "DIGEST=$digest" >> "$GITHUB_ENV"
+          ls -lh "dist/$FILE"
+
+      - name: 校验大小 / 必要时分卷
+        env:
+          FILE: ${{ matrix.file }}
+          MAX_MB: ${{ inputs.max_asset_mb }}
+        run: |
+          set -euo pipefail
+          [[ "$MAX_MB" =~ ^[0-9]+$ ]] && [ "$MAX_MB" -ge 100 ] && [ "$MAX_MB" -le 2000 ] || {
+            echo "::error::max_asset_mb 必须是 100–2000 之间的整数（GitHub 单资产上限 2 GiB）"
+            exit 1
+          }
+          size="$(wc -c < "dist/$FILE" | tr -d '[:space:]')"
+          sha="$(sha256sum "dist/$FILE" | cut -d' ' -f1)"
+          limit=$(( MAX_MB * 1024 * 1024 ))
+          if [ "$size" -gt "$limit" ]; then
+            # -d -a 2 -> .part00 … .part99，最多 100 卷
+            split -b "${MAX_MB}M" -d -a 2 "dist/$FILE" "dist/$FILE.part"
+            rm -f "dist/$FILE"
+            parts="$(find dist -maxdepth 1 -name "$FILE.part*" | wc -l | tr -d '[:space:]')"
+            partsizes="$(for p in dist/"$FILE".part*; do wc -c < "$p" | tr -d '[:space:]'; done | paste -sd, -)"
+            echo "镜像 $size 字节 > $limit 字节，已切成 $parts 卷"
+          else
+            parts=0
+            partsizes="$size"
+          fi
+          {
+            echo "SIZE=$size"
+            echo "SHA=$sha"
+            echo "PARTS=$parts"
+            echo "PARTSIZES=$partsizes"
+          } >> "$GITHUB_ENV"
+
+      - name: 覆盖上传到 Release
+        env:
+          TAG: ${{ needs.plan.outputs.tag }}
+          FILE: ${{ matrix.file }}
+        run: |
+          set -euo pipefail
+          # 先删掉这个镜像的旧资产（含上次分卷残留），再传本次的全部文件
+          gh release view "$TAG" --json assets --jq '.assets[].name' > old-assets.txt || true
+          while IFS= read -r a; do
+            case "$a" in
+              "$FILE"|"$FILE".part[0-9][0-9])
+                gh release delete-asset "$TAG" "$a" -y >/dev/null || true
+                ;;
+            esac
+          done < old-assets.txt
+          gh release upload "$TAG" dist/* --clobber
+          ls -lh dist/
+
+      - name: 写元数据行
+        env:
+          REF: ${{ matrix.ref }}
+          FILE: ${{ matrix.file }}
+          LOAD_TAG: ${{ matrix.load_tag }}
+          PLATFORM: ${{ needs.plan.outputs.platform }}
+          INDEX: ${{ matrix.index }}
+        run: |
+          set -euo pipefail
+          mkdir -p meta
+          printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+            "$REF" "$FILE" "$SIZE" "$SHA" "$PARTS" "$PARTSIZES" "$DIGEST" \
+            "$PLATFORM" "$LOAD_TAG" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            > "meta/$INDEX.meta"
+          {
+            echo "### $REF"
+            echo ''
+            echo "- 资产: \`$FILE\`（$SIZE 字节，$PARTS 卷）"
+            echo "- sha256: \`$SHA\`"
+            echo "- digest: \`$DIGEST\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 上传元数据
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-meta-${{ matrix.index }}
+          path: meta/*.meta
+          if-no-files-found: error
+          retention-days: 1
+
+  manifest:
+    name: 汇总 MANIFEST.tsv
+    needs: [plan, pull]
+    # 部分镜像拉取失败时，也要把成功那些写进清单
+    if: always() && needs.plan.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 检出仓库（合并脚本）
+        uses: actions/checkout@v4
+        with:
+          path: build-tools
+          persist-credentials: false
+
+      - name: 收集各镜像元数据
+        uses: actions/download-artifact@v4
+        with:
+          pattern: image-meta-*
+          path: meta
+          merge-multiple: true
+        continue-on-error: true
+
+      - name: 下载旧 MANIFEST.tsv
+        env:
+          TAG: ${{ needs.plan.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p old
+          gh release download "$TAG" --pattern 'MANIFEST.tsv' --dir old --clobber || true
+
+      - name: 合并并发布清单
+        env:
+          TAG: ${{ needs.plan.outputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python3 build-tools/scripts/merge-manifest.py \
+            --old old/MANIFEST.tsv --meta meta --out MANIFEST.tsv
+          gh release upload "$TAG" MANIFEST.tsv --clobber
+          {
+            echo "### 清单已更新 · $TAG"
+            echo ''
+            echo '本机下载并导入（可断点续传、自动校验 sha256）：'
+            echo '```bash'
+            echo "bash scripts/load-images.sh --repo $REPO --tag $TAG --list"
+            echo "bash scripts/load-images.sh --repo $REPO --tag $TAG --all"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
