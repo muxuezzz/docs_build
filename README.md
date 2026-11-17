@@ -58,23 +58,64 @@ vllm-omni 150 分钟，其余 60–120 分钟。实测某个站点明显超过 1
 | `.github/workflows/mirror-images.yml` | 独立的镜像中转：crane 拉镜像 → tar → Release |
 | `images.txt` | 镜像中转的默认镜像清单 |
 | `patches/*/offline.patch` | 各项目的离线化补丁（详见下表） |
-| `scripts/apply-patches.sh` | 在 CI 中按序打补丁 |
+| `scripts/apply-patches.sh` | 在 CI 中按序打补丁（三级降级 + 冲突检测，见下） |
 | `scripts/load-images.sh` | 本机从 Release 下载、校验、导入镜像 tar |
 | `scripts/plan-images.py` / `merge-manifest.py` | 清单解析与 `MANIFEST.tsv` 合并 |
 | `scripts/make-patches.sh` | 从本地仓库重新导出补丁 |
+| `scripts/offline-config.py` | 按锚点改写上游 `mkdocs.yml`（替代该文件上的补丁，见下） |
 | `scripts/build-*.sh` | 真正的构建命令，CI 与本地共用 |
 
 补丁内容：
 
 | 补丁 | 改了什么 |
 | --- | --- |
-| `patches/vllm-ascend` | `offline`/`privacy` 插件、去 CDN 字体、site_url/repo_url 换内网地址 |
+| `patches/vllm-ascend` | 首页去掉 GitHub star/watch 按钮、preview 横幅指向内网、`rtd_build.sh` 去掉 `--strict`。**`mkdocs.yml` 已不在这里**，改由 `scripts/offline-config.py` 处理（原因见下） |
 | `patches/recipes` | MkDocs 站：关闭 `strict`、去掉 Material 的 GitHub star 请求、移除无人使用的 MathJax；Next 站：`output: 'export'`、logo 从 docs.vllm.ai 下载到 `public/logos`、去掉首页 `meta refresh` 跳转、**侧边栏 props 裁到 5 个字段（产物 1.5 GB → 343 MB）** |
 | `patches/ruff` | 在 `mkdocs.template.yml` 里加 `font: false` + `privacy`/`offline`，去 fathom 统计，去 docs.astral.sh 图标外链，`source.html` 去掉 `api.github.com` 请求 |
 | `patches/uv` | 同 ruff（配置在 `mkdocs.yml`） |
 | `patches/ty` | 同 ruff（配置在 `mkdocs.yml`） |
 | `patches/litellm-docs` | 去掉 PostHog / GA4 / FeedbackRocket 三个运行时脚本与 Google Fonts `@import` |
 | `patches/vllm-omni` | `font: false` + `privacy`/`offline`，Slack 图标改内联 SVG，MathJax / Mermaid 改本地副本，`site_url` 支持环境变量覆盖 |
+
+### 为什么 vLLM Ascend 的 `mkdocs.yml` 不打补丁
+
+`mkdocs.yml` 是上游最活跃的文件之一：版本号、nav 列表、`markdown_extensions` 每个 release
+都在动。行级补丁承诺「上下文必须精确匹配」，于是每次上游一改，`git apply --3way` 就在
+「两边都改过的行」上留冲突标记（2026-11 的实例：v0.30 能打上，v0.32 因为把 `- tables`
+换成了 `pymdownx.multi.md_table`、并把 `toc_depth` 从 4 改成 3，正好撞在补丁的同一条
+hunk 上）。冲突时 `git apply` 退出码 1，`apply-patches.sh` 的 `set -e` 直接中止，
+日志里只剩一句 `Applied patch to 'mkdocs.yml' with conflicts.`，连 `::error` 都来不及打。
+
+所以这个文件改成由 `scripts/offline-config.py` 按 key / 列表项定位就地改写：
+
+- **幂等**：重复执行结果不变，中英文各跑一遍不会叠加改动；
+- **上游无关**：没有行号和上下文行，上游加多少 nav、怎么重写扩展块都不影响；
+- **失败即报错**：上游真把 `plugins:` 之类的键改名时，退出码 1 并输出
+  `::error title=配置锚点缺失::找不到键 plugins:`，而不是留一堆 `<<<<<<<`
+  让后面的 `mkdocs build` 报 YAML 语法错。
+
+`build-vllm-ascend.sh` 在构建前自动调用它（`--site-url` 缺省仍是内网地址）。要再导出一份
+针对某个 tag 的补丁时，记得把 `mkdocs.yml` 的改动继续排除在补丁之外。
+
+### 补丁打不上时，`apply-patches.sh` 会怎么处理
+
+每份补丁按下面的顺序降级，命中即止：
+
+1. **`git apply --3way`**：有基线 blob 时能做三方合并，容忍行号和周边内容的漂移；
+2. **`git apply`**：上下文严格匹配。浅克隆（`ruff` / `litellm` / `recipes-next` 都是
+   `fetch-depth: 1`）拿不到基线 blob，会落到这一级，容错为 0；
+3. **`patch -p1 -F3`**：允许每个 hunk 的上下文最多错 3 行，专治「上游只在 hunk 旁边改了两行」
+   这种 `git apply` 不肯接受的漂移。先 `--dry-run` 确认能合上再动文件，成功时输出
+   `::warning` 并带上 `Hunk #1 succeeded at 24 with fuzz 2` 这类原始信息。
+
+三级都不成立才失败。**脚本从不接受「带冲突地应用」**：`--3way` 冲突会在 `mkdocs.yml`
+里留下 `<<<<<<<` 标记且退出码为 1，以前被 `set -e` 闷掉，日志只剩一句
+`Applied patch ... with conflicts.`；现在会检查 index 的 unmerged 条目和文件内的冲突标记，
+并用 `::error` 说明是哪个文件、怎么还原。补丁文件若带 CRLF（Windows 上 `core.autocrlf=true`
+的产物）会先规范化成 LF 副本再应用——否则 `git apply` 会因为行尾不匹配而逐行失败。
+
+`git apply` 两级都失败时会把原始 stderr 一并打印，CI 日志里就能判断是「浅克隆缺 blob」
+「文件不存在（ref 与补丁不匹配）」还是「上游真的改写了那几行」。
 
 ### 为什么会有 `overrides/partials/source.html`
 

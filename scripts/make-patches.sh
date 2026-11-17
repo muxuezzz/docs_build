@@ -48,6 +48,13 @@ for name in vllm-ascend recipes ruff uv ty vllm-omni litellm-docs; do
   # 不能写进补丁，否则会把构建机的临时结果带给 CI。
   excludes=()
   case "$name" in
+    vllm-ascend)
+      # mkdocs.yml 由 scripts/offline-config.py 按锚点改写，不进补丁：
+      # 否则本地改过的配置会被顺手导进 offline.patch，下次上游一动就冲突。
+      excludes=(
+        ':(exclude)mkdocs.yml'
+      )
+      ;;
     vllm-omni)
       excludes=(
         ':(exclude)docs/user_guide/examples'
