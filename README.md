@@ -117,6 +117,27 @@ hunk 上）。冲突时 `git apply` 退出码 1，`apply-patches.sh` 的 `set -e
 `git apply` 两级都失败时会把原始 stderr 一并打印，CI 日志里就能判断是「浅克隆缺 blob」
 「文件不存在（ref 与补丁不匹配）」还是「上游真的改写了那几行」。
 
+### 为什么脚本在开头就算好自身目录
+
+`build-vllm-omni.sh` / `build-litellm-docs.sh` 的末尾要调用同目录的
+`localize-external-assets.py`。CI 是用**相对路径**调脚本的
+（`bash build-tools/scripts/build-vllm-omni.sh src out/x`），而脚本中途会 `cd "$src"`，
+之后再 `dirname "${BASH_SOURCE[0]}"` 得到的就是相对 `src/` 的路径，`cd` 必然失败：
+
+```
+build-tools/scripts/build-vllm-omni.sh: line 85: cd: build-tools/scripts: No such file or directory
+```
+
+所以这两个脚本都在 `set -euo pipefail` 之后、`cd` 之前先把 `script_dir` 解析成
+绝对路径，并且：
+- 不用 `dirname`（部分 Windows 环境的 bash 里没有这个可执行文件），改用 `${var%/*}`；
+- 先把反斜杠统一成 `/`，Git Bash 下传 `D:\...` 也能正确切分；
+- 找不到 `localize-external-assets.py` 时直接 `::error` 退出，而不是让外链静默留在产物里
+  （那一步是 `|| true` 容错的，路径错了不会有任何提示）。
+
+`build-vllm-ascend.sh` 不需要这项改动：它本来就在 `cd "$src"` 之前解析 `script_dir`，
+顺序是对的。
+
 ### 为什么会有 `overrides/partials/source.html`
 
 mkdocs-material 的仓库按钮带 `data-md-component="source"` 时，`bundle.js` 会去

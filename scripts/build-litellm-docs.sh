@@ -10,6 +10,22 @@
 #       不能双击 index.html 打开，需要静态服务器或部署到站点根目录。
 set -euo pipefail
 
+# 脚本自身目录。必须在 cd 进源码目录之前解析：CI 用相对路径调用
+# （bash build-tools/scripts/build-litellm-docs.sh src out/x），cd 之后相对路径失效。
+# 反斜杠统一成 /，兼容 Git Bash 下的 Windows 风格路径。
+self_path=${BASH_SOURCE[0]//\\//}
+case "$self_path" in
+  */*) script_dir=$(cd "${self_path%/*}" && pwd) ;;
+  *)
+    resolved=$(command -v "${BASH_SOURCE[0]}" 2>/dev/null || true)
+    resolved=${resolved//\\//}
+    case "$resolved" in
+      */*) script_dir=$(cd "${resolved%/*}" && pwd) ;;
+      *)   script_dir=$PWD ;;
+    esac
+    ;;
+esac
+
 src=${1:?用法: build-litellm-docs.sh <源码目录> <输出目录>}
 out=${2:?用法: build-litellm-docs.sh <源码目录> <输出目录>}
 
@@ -21,6 +37,21 @@ if [ "$out" = "$src/build" ]; then
   echo "输出目录不能是源码自带的 build/ 目录，请换一个路径" >&2
   exit 1
 fi
+
+# 外链本地化要用的脚本和解释器，先确认好：npm ci + build 要半小时，
+# 等到末尾才发现脚本丢了等于白跑一遍。
+localize="$script_dir/localize-external-assets.py"
+if [ ! -f "$localize" ]; then
+  echo "::error title=缺少外链本地化脚本::${localize} 不存在，离线包会残留外链" >&2
+  exit 1
+fi
+py=${PYTHON:-python3}
+command -v "$py" >/dev/null 2>&1 || py=python
+
+# Git Bash / MSYS 下 pwd 给的是 /d/tmp/... 形式，原生 python.exe 打不开；有 cygpath 就转。
+native_path() {
+  if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else printf '%s\n' "$1"; fi
+}
 
 cd "$src"
 
@@ -43,11 +74,6 @@ if [ ! -f "$src/build/index.html" ]; then
   exit 1
 fi
 
-# 构建脚本所在目录，用来找同目录的 localize-external-assets.py
-here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-py=${PYTHON:-python3}
-command -v "$py" >/dev/null 2>&1 || py=python
-
 rm -rf "$out"
 mkdir -p "$out"
 cp -a "$src/build/." "$out/"
@@ -55,6 +81,7 @@ cp -a "$src/build/." "$out/"
 # Docusaurus 没有 MkDocs 的 privacy 插件：正文里的远端图片、内嵌 iframe 会原样留在 HTML 里。
 # 这里把它们抓到 assets/external/ 并改写链接，失败的保留原 URL（联网时仍能显示）。
 echo "[build] 本地化外链资源"
-"$py" "$here/localize-external-assets.py" "$out" --prefix assets/external --jobs 12 || true
+"$py" "$(native_path "$localize")" "$(native_path "$out")" \
+  --prefix assets/external --jobs 12 || true
 
 echo "[build] 完成，文件数: $(find "$out" -type f | wc -l)，体积: $(du -sh "$out" | cut -f1)"

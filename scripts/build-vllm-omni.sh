@@ -9,6 +9,24 @@
 #   - 仓库必须是完整历史：git-revision-date-localized 要读取每个文件的提交时间
 set -euo pipefail
 
+# 脚本自身目录。必须在这里（还没 cd 到别处之前）解析：CI 用相对路径调用
+# （bash build-tools/scripts/build-vllm-omni.sh src out/x），一旦 cd 进源码目录，
+# 相对路径就再也解析不到了，后半段找同目录脚本会直接失败。
+# 不用 dirname：部分 Windows 环境（WorkBuddy 的 bash shim）里没有这个可执行文件。
+# 先把反斜杠统一成 /：Git Bash 下 Windows 风格路径很常见，按 / 切分才不会漏。
+self_path=${BASH_SOURCE[0]//\\//}
+case "$self_path" in
+  */*) script_dir=$(cd "${self_path%/*}" && pwd) ;;
+  *)
+    resolved=$(command -v "${BASH_SOURCE[0]}" 2>/dev/null || true)
+    resolved=${resolved//\\//}
+    case "$resolved" in
+      */*) script_dir=$(cd "${resolved%/*}" && pwd) ;;
+      *)   script_dir=$PWD ;;
+    esac
+    ;;
+esac
+
 src=${1:?用法: build-vllm-omni.sh <源码目录> <输出目录> [站点根地址]}
 out=${2:?用法: build-vllm-omni.sh <源码目录> <输出目录> [站点根地址]}
 site_url=${3:-http://vllm-omni.internal/}
@@ -16,6 +34,22 @@ site_url=${3:-http://vllm-omni.internal/}
 src=$(cd "$src" && pwd)
 mkdir -p "$out"
 out=$(cd "$out" && pwd)
+
+# 外链本地化要用的脚本和解释器，先在这里确认好：这一步放在构建之后，
+# 构建要几十分钟，等到末尾才发现脚本丢了等于白跑一遍。
+localize="$script_dir/localize-external-assets.py"
+if [ ! -f "$localize" ]; then
+  echo "::error title=缺少外链本地化脚本::${localize} 不存在，离线包会残留外链" >&2
+  exit 1
+fi
+py=${PYTHON:-python3}
+command -v "$py" >/dev/null 2>&1 || py=python
+
+# Git Bash / MSYS 下 pwd 给的是 /d/tmp/... 形式，原生 python.exe 打不开；
+# 有 cygpath 就转成 Windows 路径，CI（Linux）上没有这个命令，保持原样。
+native_path() {
+  if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else printf '%s\n' "$1"; fi
+}
 
 # 1) 历史完整性：浅克隆会让「最后更新」时间全部缺失
 if [ "$(git -C "$src" rev-parse --is-shallow-repository 2>/dev/null || echo false)" = "true" ]; then
@@ -74,7 +108,9 @@ export OFFLINE_SITE_URL="$site_url"
 # 不用 --strict：构建结束再单独检查外链（audit-offline.py）
 # BUILD_LOG 可选：把完整构建日志落盘，便于观察长耗时构建（约 1800 页虚拟 API 页）
 if [ -n "${BUILD_LOG:-}" ]; then
-  mkdir -p "$(dirname "$BUILD_LOG")"
+  case "$BUILD_LOG" in
+    */*) mkdir -p "${BUILD_LOG%/*}" ;;
+  esac
   mkdocs build --site-dir "$out" -v 2>&1 | tee "$BUILD_LOG" | tail -40
 else
   mkdocs build --site-dir "$out" 2>&1 | tail -40
@@ -82,10 +118,8 @@ fi
 
 # 外链本地化：material 的 privacy 插件下载时没有超时，一个不可达的域名就能把
 # 整次构建挂死，所以改用这个脚本（并发下载、有超时、失败只降级）
-here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-py=${PYTHON:-python3}
-command -v "$py" >/dev/null 2>&1 || py=python
 echo "[build] 本地化外链资源"
-"$py" "$here/localize-external-assets.py" "$out" --prefix assets/external --jobs 8 || true
+"$py" "$(native_path "$localize")" "$(native_path "$out")" \
+  --prefix assets/external --jobs 8 || true
 
 echo "[build] 完成，文件数: $(find "$out" -type f | wc -l)，体积: $(du -sh "$out" | cut -f1)"
